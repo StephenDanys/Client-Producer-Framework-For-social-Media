@@ -1,10 +1,13 @@
+package Nodes;
+
 import java.util.*;
 import java.net.*;
 import java.math.BigInteger;
 import java.util.*;
 impoe
 
-public class Broker  implements Node{
+
+public class Broker  implements Node {
     //class variables
     private static final int PUB_PORT = 1999; //the port numner for the contect creators and the other broker nodes. 
     private static final int CON_PORT = 2000; //the port number for the consumers.
