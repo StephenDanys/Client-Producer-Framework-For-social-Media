@@ -24,6 +24,8 @@ public class PublisherMain {
             System.err.println("ERROR: IP is loopback address");
             return;
         }
+        //create chanell name
+
         Publisher pub=new Publisher();
         List<String> serverPorts=null;
         if(args.length < 1){
@@ -39,7 +41,7 @@ public class PublisherMain {
                 }
             }
         }else{
-            serverPorts = new ArrayList<>(Arrays.asList(args));
+            serverPorts = new ArrayList(Arrays.asList(args));
         }
 
         if (pub.init(serverPorts)){
