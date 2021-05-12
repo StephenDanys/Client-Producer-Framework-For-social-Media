@@ -1,3 +1,5 @@
+package Nodes;
+
 import java.util.*;
 
 public interface Node {
@@ -5,7 +7,7 @@ public interface Node {
 
     public void init(int x);
     public List<Broker> getBrokers();
-    public void connect();
-    public void disconnect();
+    public void connect();// go online
+    public void disconnect(); //close/ stop connections
     public void updateNodes();
 }
