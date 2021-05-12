@@ -1,6 +1,9 @@
+package Nodes;
+
 import java.util.*;
 
-public class Broker  implements Node{
+
+public class Broker  implements Node {
     //class variables
     List<Consumer> registeredUsers;
     List<Publisher> registeredPublishers;
