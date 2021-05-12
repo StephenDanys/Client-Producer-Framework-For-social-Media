@@ -12,7 +12,7 @@ public class VideoFile {
     private ArrayList<String> associatedHashtags;
     private byte[] videoFileChunk;
 
-    
+
 
     //Accessors
     public String getVideoName(){
