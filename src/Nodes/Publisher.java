@@ -2,7 +2,7 @@ package Nodes;
 
 import Extras.*;
 import Nodes.Broker;
-import supportClasses.ChannelName;
+import channelName.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

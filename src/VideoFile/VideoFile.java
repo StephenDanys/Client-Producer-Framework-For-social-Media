@@ -1,7 +1,9 @@
+package VideoFile;
 import java.awt.*;
+import java.io.Serializable;
 import java.util.*;
 
-public class VideoFile {
+public class VideoFile implements Serializable {
     private String videoName;
     private String channelName;
     private String dateCreated;
@@ -11,7 +13,26 @@ public class VideoFile {
     private String frameHeight;
     private ArrayList<String> associatedHashtags;
     private byte[] videoFileChunk;
+    private int serial = 0; //serial number for chunks
 
+    //constructor
+    public  VideoFile(String videoName, String channelName, String dateCreated, String length, String framerate, String frameWidth, String frameHeight,
+                      ArrayList<String> associatedHashtags, byte[] videoFileChunk){
+        this.videoName=videoName;
+        this.channelName=channelName;
+        this.dateCreated=dateCreated;
+        this.length=length;
+        this.framerate=framerate;
+        this.frameWidth=frameWidth;
+        this.frameHeight=frameHeight;
+        this.associatedHashtags=associatedHashtags;
+        this.videoFileChunk=videoFileChunk;
+    }
+    public VideoFile(String videoName, String channelName, String dateCreated, String length, String framerate, String frameWidth, String frameHeight,
+                     ArrayList<String> associatedHashtags, byte[] videoFileChunk, int serial){
+        this(videoName,channelName,dateCreated,length,framerate,frameWidth,frameHeight,associatedHashtags,videoFileChunk);
+        this.serial=serial;
+    }
 
 
     //Accessors
@@ -86,5 +107,11 @@ public class VideoFile {
 
     public void setVideoFileChunk(byte[] videoFileChunk){
         this.videoFileChunk = videoFileChunk;
+    }
+    public int getSerial(){
+        return serial;
+    }
+    public int compareTo(VideoFile b){
+        return Integer.compare(this.getSerial(), b.getSerial());
     }
 }
