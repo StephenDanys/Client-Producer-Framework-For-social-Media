@@ -1,24 +1,28 @@
 package Nodes;
 
-import Extras.*;
+import Extras.Extras;
+import Nodes.Broker;
+import supportClasses.ChannelName;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Publisher implements Node{
-    private static final int PORT = 2001;
-    private final String IP;
+    private  final int port;
+    private static final  String IP= "127.0. 0.1";
     private final String RANGE; //range of artists (regex expression)
 
     private ServerSocket server;
     ChannelName channelName;
 
     //constructor
-    public Publisher(String ip, String range){
-        IP = ip;
+    public Publisher(int port, String range, ChannelName name){
+        this.port=port;
         RANGE = range;
-        Utilities.print("PUBLISHER: Initialize publisher");
+        Extras.print("PUBLISHER: Initialize publisher");
+        this.channelName= name;
     }
 
     //methods
@@ -52,13 +56,13 @@ public class Publisher implements Node{
     public void connect(){}
 
     public void disconnect(){
-        Utilities.print("PUBLISHER: Close socket connection");
+        Extras.print("PUBLISHER: Close socket connection");
 
         if (socket != null){
             try {
                 socket.close();
             } catch (IOException e) {
-                Utilities.printError("PUBLISHER: ERROR: Could not close socket connection");
+                Extras.printError("PUBLISHER: ERROR: Could not close socket connection");
             }
         }
     }
