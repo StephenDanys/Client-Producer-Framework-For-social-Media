@@ -21,7 +21,7 @@ public class Publisher {
     private final String RANGE; //range of artists (regex expression)
     private ArrayList<Pair<Integer, BigInteger>>  Brokers; //List of active Brokers
     private ServerSocket server;
-    ChannelName channelName;
+    private ChannelName channelName;
 
     private Map<Integer, ArrayList<String>> brokersMap; //brokers (ports) and their publishers
     private final ExecutorService threadPool;
