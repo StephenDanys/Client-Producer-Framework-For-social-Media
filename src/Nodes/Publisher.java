@@ -68,7 +68,6 @@ public class Publisher {
         }
     }
 
-    }
     public void notifyBrokersForHashTags(String Tag){
 
     }

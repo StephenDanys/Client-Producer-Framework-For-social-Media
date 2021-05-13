@@ -1,6 +1,4 @@
-package channelName;
-
-import VideoFile.VideoFile;
+package VideoFile;
 
 public class Value {
     private VideoFile videoFile;
