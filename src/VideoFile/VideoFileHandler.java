@@ -2,14 +2,16 @@ package VideoFile;
 import channelName.*;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class VideoFileHandler {
+
     public static Map<String, ArrayList<Value>> read(String range) {
         System.out.println("HANDLER: Reading music files");
-
+        byte content[]=null;
         //get the directory
         File dir = new File("./res/dataset1/");
         if (!dir.exists()) {
@@ -23,8 +25,13 @@ public class VideoFileHandler {
         if(files!=null){
             for(File file:files){
                 try{
-                    InputStream inputStream = new FileInputStream(file);
-                    //OutputStream outputStream = new FileOutputStream(outputFile);
+                    //meta data part goes here too
+
+                    content= Files.readAllBytes(file.toPath());
+
+                    //if file doesn't mach range, continue
+
+                videos
                 } catch(IOException ex) {
                     ex.printStackTrace();
                 }
