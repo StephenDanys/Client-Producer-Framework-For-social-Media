@@ -43,7 +43,6 @@ public class Publisher {
 
     }
     public void  removeHashTag(String tag){
-
     }
 
     /**
@@ -107,7 +106,7 @@ public class Publisher {
                 Extras.printError("PUBLISHER: ERROR: No brokers found for this publisher");
                 return false;
             }
-            //specify which broker is responsible for what Hashtag, store results in brokerMap
+            //specify which broker is responsible for what Hashtag and the channelName, store results in brokerMap
             assignPublisherToBroker(Brokers);
         } else {
             Extras.printError("PUBLISHER: ERROR: No brokers initialized");
@@ -238,6 +237,17 @@ public class Publisher {
                     brokersMap.get(broker.getKey()).add(hashTag);
                     break;
                 }
+            }
+        }
+        BigInteger hashValue = hashTopic(channelName.getChannelName()).mod(maxBrokerHash);
+        for (Pair<Integer, BigInteger> broker : brokerList) { //for each broker port
+            if (hashValue.compareTo(broker.getValue()) < 0) {
+                if (!brokersMap.containsKey(broker.getKey())) {
+                    brokersMap.put(broker.getKey(), new ArrayList<String>());
+                    //puts in the broker port
+                }
+                brokersMap.get(broker.getKey()).add(channelName.getChannelName());
+                break;
             }
         }
     }

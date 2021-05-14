@@ -15,7 +15,7 @@ public class ChannelName {
         this.hastagsPublished=hastagsPublished;
         this.userVideoFilesMap=userVideoFilesMap;
     }
-    public String  getChanelName(){
+    public String  getChannelName(){
         return channelName;
     }
     public HashSet<String> getHastagsPublished(){
