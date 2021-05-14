@@ -12,9 +12,9 @@ import java.net.*;
 
 public class Consumer {
 
-    private final int PORT;
-    private final String IP;
-    private final String SERVER_IP;
+    private  int PORT;
+    private final String IP = "127.0.0.1";
+    private final String SERVER_IP = "127.0.0.1";
 
     private Pair<String, BigInteger> user_credentials = null;
     private String STATE;
@@ -22,15 +22,14 @@ public class Consumer {
     private static String IN = "LOGGED IN";
 
     private HashMap<String, BigInteger> channels = null; // PUBLISHER ASSGNINED TO BROKER
+    private HashMap<String, String> publishers = null; //artists assigned to brokers (IP addresses)
 
     private List<VideoFile> preview_videos;
     private final List<VideoFile> shared_chunks;
 
     //REGISTER USER TO BROKER
-    public Consumer(String IP, String SERVER_IP, int PORT) {
+    public Consumer(int PORT) {
         Extras.print("CONSUMER:  Create consumer");
-        this.IP = IP;
-        this.SERVER_IP = SERVER_IP;
         this.PORT = PORT;
         STATE = OUT;
         shared_chunks = new ArrayList<>();
@@ -191,7 +190,7 @@ public class Consumer {
                 disconnect(connection);
             }
             //CHECK THE CHANNELS LIST TO CHOOSE THE RIGHT BROKER
-            String brokerIP = channels.get(videoN);
+            BigInteger brokerIP = channels.get(videoN);
             if (brokerIP == null) {
                 Extras.printError("Publisher dosen't exist.");
                 return null;
@@ -217,7 +216,7 @@ public class Consumer {
             disconnect(connection);
         } catch (IOException e) {
             Extras.printError("CONSUMER: PLAY: ERROR: Could not grt strams.");
-        } catch (IOException e) {
+        } catch (ClassNotFoundException cnf){
             Extras.printError("CONSUMER: PLAY:  ERROR: Could not cast Object to String");
         }
         return videos;
@@ -280,10 +279,10 @@ public class Consumer {
             }
             return returned;
         } catch (IOException e) {
-            Utilities.printError("CONSUMER: RECEIVE DATA: ERROR: Could not get streams");
+            Extras.printError("CONSUMER: RECEIVE DATA: ERROR: Could not get streams");
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
-            Utilities.printError("CONSUMER: RECEIVE DATA: ERROR: Could not cast Object to MusicFile");
+            Extras.printError("CONSUMER: RECEIVE DATA: ERROR: Could not cast Object to MusicFile");
         }
         return null;
     }
@@ -357,12 +356,12 @@ public class Consumer {
     }
 
     private void disconnect(Socket socket){
-        Utilities.printError("CONSUMER: Close socket connection.");
+        Extras.printError("CONSUMER: Close socket connection.");
         if (socket!= null){
             try{
                 socket.close();
             }catch (IOException e){
-                Utilities.printError("PUBLISHER: ERROR: Could not close socket connection.");
+                Extras.printError("PUBLISHER: ERROR: Could not close socket connection.");
             }
         }
 
