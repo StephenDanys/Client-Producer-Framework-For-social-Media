@@ -57,22 +57,52 @@ public class Publisher {
 
     }
     /**
-     * When a file with specific metadata doesn't exist send null
-     * @param connection open connection with broker
+     * Make publisher online (await incoming connections)
+     * Get the song, search for it and push it to broker
      */
-    private void notifyFailure(Socket connection) {
-        Extras.print("PUBLISHER: Notify that song doesn't exist");
+    public void connect() {
+        Extras.print("PUBLISHER: Going online");
 
-        ObjectOutputStream out;
+        //open server socket
         try {
-            out = new ObjectOutputStream(connection.getOutputStream());
-            out.writeObject(null);
-            out.flush();
-            out.writeObject(null);
-            out.flush();
+
+            //open server socket
+            server = new ServerSocket(port);
         } catch (IOException e) {
-            Extras.printError("PUBLISHER: ERROR: PUSH: Could not send file chunks");
+            Extras.printError("PUBLISHER: ERROR: Server could not go online");
+            try {
+                if (server != null) server.close();
+            } catch (IOException ex) {
+                Extras.printError("PUBLISHER: ERROR: Server could not shut down");
+            }
         }
+
+        //create a thread, to await connection from brokers
+        Thread task= new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Socket connection;
+                try {
+                    connection=server.accept();
+
+                    //for each accepted connection create new thread
+                    Thread processTask = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                                in.readObject();
+                            } catch (IOException e) {
+                                Extras.printError("PUBLISHER: ONLINE: ERROR: Could not read from stream");
+                            }
+                        }
+                    });
+                } catch (IOException e) {
+                    Extras.printError("PUBLISHER: ONLINE: ERROR: Could not accept connection");
+                }
+            }
+        });
+
     }
 
     public void notifyBrokersForHashTags(String Tag){
@@ -186,7 +216,7 @@ public class Publisher {
      * Connect with responsible brokers and send them publisher's videos
      */
     private void informBrokers() {
-        Extras.print("PUBLISHER: Inform brokers for their artists");
+        Extras.print("PUBLISHER: Inform brokers for their Hashtags");
 
         for (int broker : brokersMap.keySet()) {
             Thread task = new Thread(new Runnable() {
@@ -197,7 +227,7 @@ public class Publisher {
                         socket_conn = new Socket(IP, broker);
 
                         ObjectOutputStream out = new ObjectOutputStream(socket_conn.getOutputStream());
-                        //send to responsible brokers their artists
+                        //send to responsible brokers their hashtags
                         out.writeObject(brokersMap.get(broker));
                         out.flush();
                     } catch (IOException e) {
@@ -252,7 +282,24 @@ public class Publisher {
         }
     }
 
-    public void connect(){}
+    /**
+     * When a file with specific metadata doesn't exist send null
+     * @param connection open connection with broker
+     */
+    private void notifyFailure(Socket connection) {
+        Extras.print("PUBLISHER: Notify that song doesn't exist");
+
+        ObjectOutputStream out;
+        try {
+            out = new ObjectOutputStream(connection.getOutputStream());
+            out.writeObject(null);
+            out.flush();
+            out.writeObject(null);
+            out.flush();
+        } catch (IOException e) {
+            Extras.printError("PUBLISHER: ERROR: PUSH: Could not send file chunks");
+        }
+    }
 
     public void disconnect(Socket socket){
         Extras.print("PUBLISHER: Close socket connection");
