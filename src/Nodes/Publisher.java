@@ -2,7 +2,9 @@ package Nodes;
 
 import Extras.*;
 import Nodes.Broker;
-import supportClasses.ChannelName;
+import VideoFile.Value;
+import VideoFile.VideoFileHandler;
+import channelName.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -19,11 +21,12 @@ public class Publisher {
     private  final int port;
     private static final  String IP= "127.0. 0.1";
     private final String RANGE; //range of artists (regex expression)
-    private ArrayList<Pair<Integer, BigInteger>>  Brokers; //List of active Brokers
+    private ArrayList<Pair<Integer, BigInteger>>  Brokers; //List of active Brokers( Port + HashValue)
+    private Map<String, ArrayList<Value>> files;//pairs of Hashtags + videos. Currently implemented as lots same videos
     private ServerSocket server;
-    ChannelName channelName;
+    private ChannelName channelName;
 
-    private Map<Integer, ArrayList<String>> brokersMap; //brokers (ports) and their publishers
+    private Map<Integer, ArrayList<String>> brokersMap; //brokers (ports) and their individual Hashtags
     private final ExecutorService threadPool;
 
     //constructor
@@ -40,11 +43,15 @@ public class Publisher {
 
     }
     public void  removeHashTag(String tag){
-
     }
 
-    public Broker hashTopic(String topic){
-
+    /**
+     * Runs a
+     * @param topic trough SHA1
+     * @return BigInteger
+     */
+    public BigInteger hashTopic(String topic){
+        return Extras.SHA1(topic);
     }
     public void push(String topic, Value value){
 
@@ -68,7 +75,6 @@ public class Publisher {
         }
     }
 
-    }
     public void notifyBrokersForHashTags(String Tag){
 
     }
@@ -88,7 +94,10 @@ public class Publisher {
             Extras.printError("PUBLISHER: ERROR: No available songs");
             return false;
         }
-
+        //load every HashTag(String) from files into channelName.hashTagsPublished
+        for(String topic : files.keySet()){
+            channelName.addHashTag(topic);
+        }
         //get all active brokers
         getBrokers(brokerPorts);
         //find the brokers that are responsible for this publisher
@@ -97,6 +106,7 @@ public class Publisher {
                 Extras.printError("PUBLISHER: ERROR: No brokers found for this publisher");
                 return false;
             }
+            //specify which broker is responsible for what Hashtag and the channelName, store results in brokerMap
             assignPublisherToBroker(Brokers);
         } else {
             Extras.printError("PUBLISHER: ERROR: No brokers initialized");
@@ -201,8 +211,8 @@ public class Publisher {
         }
     }
     /**
-     * Find the brokers that are responsible for this publisher
-     * hash(chanell_name) < hash(broker_IP + broker_port)
+     * Find the brokers that are responsible for this publisher's Hashtags
+     * hash(Hashtag ) < hash(broker_IP + broker_port)
      * @param brokerList list with active brokers
      */
     private void assignPublisherToBroker (ArrayList<Pair<Integer, BigInteger>> brokerList ){
@@ -213,19 +223,31 @@ public class Publisher {
         Pair<Integer, BigInteger> maxBroker = brokerList.get(brokerList.size() - 1);
         BigInteger maxBrokerHash = maxBroker.getValue();
 
-        for (String  chanelName : files.keySet()) {
-            //if hash(artist_name) > maximum hash(broker)
-            //modulo with the maximum broker so that hash(artist_name) is in range [min_broker, max_broker]
-            BigInteger hashArtist = Extras.SHA1(artist).mod(maxBrokerHash);
+        for (String  hashTag: channelName.getHastagsPublished()) {
+            //if hash(hashTag) > maximum hash(broker)
+            //modulo with the maximum broker so that hash(hashTag) is in range [min_broker, max_broker]
+            BigInteger hashValue= hashTopic(hashTag).mod(maxBrokerHash);
 
             for (Pair<Integer, BigInteger> broker : brokerList) { //for each broker port
-                if (hashArtist.compareTo(broker.getValue()) < 0) {
+                if (hashValue.compareTo(broker.getValue()) < 0) {
                     if (!brokersMap.containsKey(broker.getKey())) {
-                        brokersMap.put(broker.getKey(), new ArrayList<Integer>());
+                        brokersMap.put(broker.getKey(), new ArrayList<String>());
+                        //puts in the broker port
                     }
-                    brokersMap.get(broker.getKey()).add(artist);
+                    brokersMap.get(broker.getKey()).add(hashTag);
                     break;
                 }
+            }
+        }
+        BigInteger hashValue = hashTopic(channelName.getChannelName()).mod(maxBrokerHash);
+        for (Pair<Integer, BigInteger> broker : brokerList) { //for each broker port
+            if (hashValue.compareTo(broker.getValue()) < 0) {
+                if (!brokersMap.containsKey(broker.getKey())) {
+                    brokersMap.put(broker.getKey(), new ArrayList<String>());
+                    //puts in the broker port
+                }
+                brokersMap.get(broker.getKey()).add(channelName.getChannelName());
+                break;
             }
         }
     }
