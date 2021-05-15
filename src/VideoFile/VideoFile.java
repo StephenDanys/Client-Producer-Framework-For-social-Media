@@ -52,7 +52,7 @@ public class VideoFile implements Serializable {
         return length;
     }
 
-    public String getFramerate(){
+    public String getFrameRate(){
         return framerate;
     }
 

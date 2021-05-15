@@ -18,15 +18,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Publisher {
-    private  final int port;
+    private  final int port; // port that Publisher uses as a server. It's also used as an Identifier
     private static final  String IP= "127.0. 0.1";
     private final String RANGE; //range of artists (regex expression)
     private ArrayList<Pair<Integer, BigInteger>>  Brokers; //List of active Brokers( Port + HashValue)
-    private Map<String, ArrayList<Value>> files;//pairs of Hashtags + videos. Currently implemented as lots same videos
+    private Map<String, ArrayList<Value>> files; //Map of Topics + videos that have this topic.
     private ServerSocket server;
     private ChannelName channelName;
 
-    private Map<Integer, ArrayList<String>> brokersMap; //brokers (ports) and their individual Hashtags
+    private Map<Integer, ArrayList<String>> brokersMap; //brokers (ports) and all their assigned hashtags
     private final ExecutorService threadPool;
 
     //constructor
@@ -38,11 +38,24 @@ public class Publisher {
         threadPool = Executors.newCachedThreadPool();
     }
 
-    //methods once online
-    public void  addHashTag(String tag){
-
+    /**
+     * adds a record to files Map.
+     * @param topic is key,
+     * @param vids the videos associated with this key
+     */
+    public void  addHashTag(String topic, ArrayList<Value> vids){
+        files.put(topic, new ArrayList<Value>());
+        for (Value vid : vids){
+            files.get(topic).add(vid);
+        }
     }
+
+    /**
+     * Remove one topic from files list
+     * @param tag
+     */
     public void  removeHashTag(String tag){
+        files.remove(tag);
     }
 
     /**
@@ -53,6 +66,7 @@ public class Publisher {
     public BigInteger hashTopic(String topic){
         return Extras.SHA1(topic);
     }
+
     public void push(String topic, Value value){
 
     }
@@ -105,9 +119,6 @@ public class Publisher {
 
     }
 
-    public void notifyBrokersForHashTags(String Tag){
-
-    }
     public ArrayList<Value> generateChunks(String v){
 
     }
@@ -119,17 +130,26 @@ public class Publisher {
     public boolean init(ArrayList<Integer> brokerPorts) {
         Extras.print("PUBLISHER: Initialize publisher");
         //load videos from file
-        files = VideoFileHandler.read(RANGE);
-        if (files == null || files.isEmpty()) {
+        ArrayList<Value> vfiles;
+        vfiles = VideoFileHandler.read(RANGE);
+        if (vfiles == null || files.isEmpty()) {
             Extras.printError("PUBLISHER: ERROR: No available songs");
             return false;
         }
+        //initialize files, using channelName topic
+        addHashTag(channelName.getChannelName(), vfiles);
+
+        //here we can add more topics, while choosing videos that this topic will apply to
+        //for the purposes of the 1st assignment, we'll only upload one video, with the channelName Topic
+
         //load every HashTag(String) from files into channelName.hashTagsPublished
         for(String topic : files.keySet()){
-            channelName.addHashTag(topic);
+            channelName.addPublishedHashTag(topic);
         }
+
         //get all active brokers
         getBrokers(brokerPorts);
+
         //find the brokers that are responsible for this publisher
         if (Brokers != null){
             if (Brokers.isEmpty()) {
@@ -143,8 +163,7 @@ public class Publisher {
             return false;
         }
 
-        //connect with responsible brokers
-        //and send them publisher's artists
+        //connect with responsible broker and send them publisher's artists
         informBrokers();
         return true;
     }
@@ -176,8 +195,9 @@ public class Publisher {
             }
         });
     }
+
     /**
-     * Connect with broker and get its hash value
+     * Connect with broker, send him my port number and get its hash value
      * @param serverPort broker's port number
      */
     private Thread getServerHash(int serverPort) {
@@ -188,10 +208,13 @@ public class Publisher {
             public void run(){
                 Socket connection;
                 ObjectInputStream in;
+                ObjectOutputStream out;
                 BigInteger hashValue;
                 try{
                     connection = new Socket(InetAddress.getByName(IP), serverPort);
-
+                    out = new ObjectOutputStream(connection.getOutputStream());
+                    out.writeObject(port); //sending to broker my port so that he knows who i am
+                    out.flush();
                     //get hash code
                     in = new ObjectInputStream(connection.getInputStream());
                     hashValue = (BigInteger) in.readObject();
@@ -204,6 +227,7 @@ public class Publisher {
         thread.start();
         return thread;
     }
+
     /**
      * Add new Broker to brokerList
      * @param Port broker's Port number
@@ -212,6 +236,7 @@ public class Publisher {
     private synchronized void updateBrokerList(int Port, BigInteger HASH){
         Brokers.add(new Pair<>(Port, HASH));
     }
+
     /**
      * Connect with responsible brokers and send them publisher's videos
      */
@@ -227,6 +252,8 @@ public class Publisher {
                         socket_conn = new Socket(IP, broker);
 
                         ObjectOutputStream out = new ObjectOutputStream(socket_conn.getOutputStream());
+                        out.writeObject(port); //sending to broker my port so that he knows who i am
+                        out.flush();
                         //send to responsible brokers their hashtags
                         out.writeObject(brokersMap.get(broker));
                         out.flush();
@@ -240,6 +267,7 @@ public class Publisher {
             threadPool.execute(task);
         }
     }
+
     /**
      * Find the brokers that are responsible for this publisher's Hashtags
      * hash(Hashtag ) < hash(broker_IP + broker_port)
@@ -253,7 +281,7 @@ public class Publisher {
         Pair<Integer, BigInteger> maxBroker = brokerList.get(brokerList.size() - 1);
         BigInteger maxBrokerHash = maxBroker.getValue();
 
-        for (String  hashTag: channelName.getHastagsPublished()) {
+        for (String  hashTag: channelName.getHashTagsPublished()) {
             //if hash(hashTag) > maximum hash(broker)
             //modulo with the maximum broker so that hash(hashTag) is in range [min_broker, max_broker]
             BigInteger hashValue= hashTopic(hashTag).mod(maxBrokerHash);
@@ -288,7 +316,6 @@ public class Publisher {
      */
     private void notifyFailure(Socket connection) {
         Extras.print("PUBLISHER: Notify that song doesn't exist");
-
         ObjectOutputStream out;
         try {
             out = new ObjectOutputStream(connection.getOutputStream());
@@ -300,7 +327,6 @@ public class Publisher {
             Extras.printError("PUBLISHER: ERROR: PUSH: Could not send file chunks");
         }
     }
-
     public void disconnect(Socket socket){
         Extras.print("PUBLISHER: Close socket connection");
 

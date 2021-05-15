@@ -1,5 +1,6 @@
 import Extras.Extras;
 import Extras.Pair;
+import VideoFile.VideoFile;
 
 import java.util.*;
 
@@ -12,17 +13,16 @@ import java.net.*;
 
 public class Consumer {
 
-    private  int PORT;
+    private final int PORT; //in this port will the consumer contact brokers
     private final String IP = "127.0.0.1";
-    private final String SERVER_IP = "127.0.0.1";
 
     private Pair<String, BigInteger> user_credentials = null;
     private String STATE;
     private static String OUT = "LOGGED OUT";
     private static String IN = "LOGGED IN";
 
-    private HashMap<String, BigInteger> channels = null; // PUBLISHER ASSGNINED TO BROKER
-    private HashMap<String, String> publishers = null; //artists assigned to brokers (IP addresses)
+    private HashMap<String, BigInteger> channels = null; // PUBLISHER ASSIGNED TO BROKER
+    private HashMap<String, Integer> publishers = null; //artists assigned to brokers (IP addresses)
 
     private List<VideoFile> preview_videos;
     private final List<VideoFile> shared_chunks;
@@ -144,13 +144,16 @@ public class Consumer {
         STATE = OUT;
         this.user_credentials = null;
     }
-
+    //RETURN TRUE IF USER IS LOGGED IN
+    public boolean isLoggedin(){
+        return STATE.equals(IN);
+    }
     /**
      * REQUEST VIDEO FROM MAIN BROKER
      * IF VIDEO IS IN MAIN BROKER, IT IS RECIEVED
      * ELSE BROKER SEND A LISTS OF OTHER BROKERS THAT WILL BE REQUIRED
      */
-    public ArrayList<VideoFile> playData(String channelN, String videoN, String mode) {
+    public ArrayList<VideoFile> playData(String channelName, String videoN, String mode) {
         Extras.print("CONSUMER: Video request");
         ArrayList<VideoFile> videos = null;
 
@@ -226,11 +229,6 @@ public class Consumer {
         return IP;
     }
 
-    //RETURN TRUE IF USER IS LOGGED IN
-    public boolean isLoggedin(){
-        return STATE.equals(IN);
-    }
-
     /**
      * Get file chunks from stream
      * If online mode is chosen then save each chunk
@@ -291,7 +289,7 @@ public class Consumer {
         //open connection
         Socket connection = null;
         try {
-            connection = new Socket(SERVER_IP, PORT);
+            connection = new Socket(IP, PORT);
 
             //request brokers list
             ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
