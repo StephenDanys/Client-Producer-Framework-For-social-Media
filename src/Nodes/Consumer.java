@@ -64,7 +64,11 @@ public class Consumer {
                 switch (message) {
                     //BROKER HAS THE VIDEO,SEND VIDEO
                     case "ACCEPT":
+                        Extras.print("CONSUMER: Pull request accepted");
                         videos = receiveData(in, mode);
+                        if(mode.equals("mode2")){
+                            VideoFileHandler.write(videos);
+                        }
                         disconnect(connection);
                         return videos;
                     //PUBLISHER DOESN'T EXIST
@@ -97,6 +101,7 @@ public class Consumer {
             String message = (String) in.readObject();
             switch (message) {
                 case "ACCEPT":
+                    Extras.print("CONSUMER: Pull request accepted");
                     videos = receiveData(in, mode);
                     break;
                 default:
@@ -158,6 +163,7 @@ public class Consumer {
         }
         return null;
     }
+
     public int getChunkListSize(){
         synchronized (shared_chunks){
             return shared_chunks.size();

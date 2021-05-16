@@ -20,24 +20,9 @@ public class ConsumerMain {
             System.err.println("ERROR: Could not get IP address");
             return;
         }
-
-        if (!IP.equals("127.0.0.1")) {
-            System.err.println("ERROR: Consumer down");
-            System.err.println("ERROR: IP is loopback address");
-            return;
-        }
-
         reader = new BufferedReader(new InputStreamReader(System.in));
-        int assignedBroker=101;
-        String serverIP;
-        if(args.length < 1){
-            System.out.println("Server IP: ");
-            serverIP = input();
-        }else{
-            serverIP = args[0];
-        }
-        Consumer consumer;
-        consumer= new Consumer(101);
+        int assignedBrokerPort = Integer.parseInt(args[0]);
+        Consumer consumer = new Consumer(assignedBrokerPort);
         while(true){
             int input = menu();
             switch(input){

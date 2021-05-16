@@ -5,7 +5,7 @@ import java.util.*;
 import Nodes.Broker;
 import Extras.Extras;
 
-public class BrokerMain {
+public class BrokerMain2 {
     private static ArrayList<Integer> brokerPorts;
 
     public static void main(String[] args){
@@ -33,3 +33,4 @@ public class BrokerMain {
     }//main
 
 }//class
+

@@ -28,10 +28,10 @@ public class VideoFileHandler {
         String frameRate = "";
         String frameWidth = "";
         String frameHeight = "";
-        String tableElements[];
 
         //get the directory
         File dir = new File("./dataset1/");
+
         if (!dir.exists()) {
             System.err.println("HANDLER: READ: ERROR: Directory doesn't exist");
             return null;
@@ -43,6 +43,7 @@ public class VideoFileHandler {
         ArrayList<VideoFile> fileChunks = new ArrayList<>();//the list with all the video chunks
 
         if(files!=null){
+
             for(File file:files){
                 try{
                     //getting the metadata of that file
@@ -70,12 +71,14 @@ public class VideoFileHandler {
                                 case (38):
                                     tableElements = stag.split("-");
                                     videoName = tableElements[1];
+                                    //if video title not in range continue to next file
+                                    if (!videoName.matches(range)) {
+                                        continue;
+                                    }
                             }
                             numForSwitch++;
                         }
                     }
-
-
 
                     ArrayList<String> associatedHashTags = new ArrayList<>();
 
@@ -83,6 +86,7 @@ public class VideoFileHandler {
 
                     VideoFile viFile = new VideoFile(videoName,"",dateCreated,length,frameRate,frameWidth,frameHeight,associatedHashTags,fileContent);
                     fileChunks.add(viFile);
+
 
                 } catch(IOException | ImageProcessingException ex) {
                     ex.printStackTrace();
@@ -110,15 +114,13 @@ public class VideoFileHandler {
 
         //create a directory if ti does not exist
         File dir = new File("./download/");
-        if (!dir.exists()) {
+        /*if (!dir.exists()) {
             if (!dir.mkdir()) {
                 Extras.printError("HANDLER: WRITE: ERROR: Could not create directory");
                 return false;
             }
         }
-
-
-
+        */
         try{
             FileOutputStream out = new FileOutputStream(dir + file.getVideoName() + ".mp4");
             out.write(file.getVideoFileChunk());
@@ -142,13 +144,15 @@ public class VideoFileHandler {
         }
 
         //create directory if it doesn't exist
-        File dir = new File("../res/Stream/");
+        File dir = new File(".\\download\\");
+        /*
         if (!dir.exists()) {
             if (!dir.mkdir()) {
                 Extras.printError("HANDLER: WRITE CHUNKS: ERROR: Could not create directory");
                 return false;
             }
         }
+        */
 
         for(VideoFile chunk : chunks){
             //create file
@@ -175,7 +179,7 @@ public class VideoFileHandler {
         }
 
         //the byte[] array of the videoFile we want to split
-        final byte[] videoBytes = file.getVideoFileChunk();
+        byte[] videoBytes = file.getVideoFileChunk();
 
         //if file doesn't contain a byte array
         if ((videoBytes == null) || (videoBytes.length == 0)){
@@ -213,13 +217,14 @@ public class VideoFileHandler {
             return null;
         }
 
+        /*
         //if list contains one chunk only
         if (chunks.size() == 1) {
             //write correct title
             chunks.get(0).setVideoName(chunks.get(0).getVideoName().substring(chunks.get(0).getVideoName().indexOf(" ") + 1));
             return chunks.get(0);
         }
-
+        */
         //sort chunks according to serial number
         chunks.sort(new Comparator<VideoFile>() {
             public int compare(VideoFile a, VideoFile b) {
@@ -228,7 +233,7 @@ public class VideoFileHandler {
         });
 
         //get bytes from chunks using a byte[] array
-        byte[] newFile = new byte[chunks.size() * 256000];
+        byte[] newFile = new byte[(chunks.size() +1) * 256000];
         int start =0; //it is the main pointer in the array that you will help us with the copy
 
         chunks.sort(VideoFile::compareTo); /*we are sorting the videoFiles using their serial numbers, in order to place them in the

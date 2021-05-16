@@ -19,22 +19,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Publisher {
-    private  final int port; // port that Publisher uses as a server. It's also used as an Identifier
-    private static final  String IP= "127.0. 0.1";
+    private final int port; // port that Publisher uses as a server. It's also used as an Identifier
+    private static final  String IP= "127.0.0.1";
     private final String RANGE; //range of artists (regex expression)
     private ArrayList<Pair<Integer, BigInteger>>  Brokers; //List of active Brokers( Port + HashValue)
     private Map<String, ArrayList<VideoFile>> files; //Map of Topics + videos that have this topic.
     private ServerSocket server;
     private ChannelName channelName;
 
-    private Map<Integer, ArrayList<String>> brokersMap; //brokers (ports) and all their assigned hashtags
+    private Map<Integer, List<String>> brokersMap; //brokers (ports) and all their assigned hashtags
     private final ExecutorService threadPool;
 
     //constructor
     public Publisher(int port, String range, ChannelName name){
         this.port=port;
         RANGE = range;
-        Extras.print("PUBLISHER: Initialize publisher");
+        Extras.print("PUBLISHER: Construct publisher");
         this.channelName= name;
         threadPool = Executors.newCachedThreadPool();
     }
@@ -87,10 +87,11 @@ public class Publisher {
             return;
         }
         //boolean found = false;
-        ArrayList<VideoFile> chunks = null;
+        ArrayList<VideoFile> chunks = new ArrayList();
 
         for(VideoFile video: files.get(topic)){ //for each video with this topic
             chunks.addAll(generateChunks(video));
+            Extras.print(String.valueOf(chunks.size()));
             chunks.add(null);
         }
         chunks.add(null);
@@ -124,7 +125,6 @@ public class Publisher {
 
         //open server socket
         try {
-
             //open server socket
             server = new ServerSocket(port);
         } catch (IOException e) {
@@ -159,12 +159,13 @@ public class Publisher {
                             }
                         }
                     });
+                    threadPool.execute(processTask);
                 } catch (IOException e) {
                     Extras.printError("PUBLISHER: ONLINE: ERROR: Could not accept connection");
                 }
             }
         });
-
+        threadPool.execute(task);
     }
 
     /**
@@ -183,9 +184,10 @@ public class Publisher {
     public boolean init(ArrayList<Integer> brokerPorts) {
         Extras.print("PUBLISHER: Initialize publisher");
         //load videos from file
+        files= new HashMap<>();
         ArrayList<VideoFile> vfiles;
         vfiles = VideoFileHandler.read(RANGE);
-        if (vfiles == null || files.isEmpty()) {
+        if (vfiles == null || vfiles.isEmpty()) {
             Extras.printError("PUBLISHER: ERROR: No available songs");
             return false;
         }
@@ -264,7 +266,7 @@ public class Publisher {
                 ObjectOutputStream out;
                 BigInteger hashValue;
                 try{
-                    connection = new Socket(InetAddress.getByName(IP), serverPort);
+                    connection = new Socket("127.0.0.1", serverPort);
                     out = new ObjectOutputStream(connection.getOutputStream());
                     out.writeObject(port); //sending to broker my port so that he knows who i am
                     out.flush();
@@ -272,8 +274,10 @@ public class Publisher {
                     in = new ObjectInputStream(connection.getInputStream());
                     hashValue = (BigInteger) in.readObject();
                     updateBrokerList(serverPort, hashValue);
-                } catch(IOException | ClassNotFoundException e) {
+                } catch(IOException  e) {
                     Extras.printError("PUBLISHER: ERROR: Could not get hash of server " + serverPort);
+                } catch (ClassNotFoundException c){
+                    Extras.printError("here");
                 }
             }
         });
@@ -307,11 +311,17 @@ public class Publisher {
                         ObjectOutputStream out = new ObjectOutputStream(socket_conn.getOutputStream());
                         out.writeObject(port); //sending to broker my port so that he knows who i am
                         out.flush();
-                        //send to responsible brokers their hashtags
+
+
                         out.writeObject(brokersMap.get(broker));
                         out.flush();
+
+                        //send to responsible brokers their hashtags
+                        out.writeObject(null);
+                        out.flush();
                     } catch (IOException e) {
-                        Extras.printError("PUBLISHER: ERROR: Could not communicate artists to broker");
+                        e.printStackTrace();
+                        Extras.printError("PUBLISHER: ERROR: Could not communicate topics to broker");
                     } finally {
                         disconnect(socket_conn);
                     }
@@ -327,7 +337,7 @@ public class Publisher {
      * @param brokerList list with active brokers
      */
     private void assignPublisherToBroker (ArrayList<Pair<Integer, BigInteger>> brokerList ){
-        Extras.print("PUBLISHER: Assign artists to responsible brokers");
+        Extras.print("PUBLISHER: Assign topics to responsible brokers");
 
         brokersMap = new HashMap<>();
         //find broker whose hash value is greater than the others
@@ -348,17 +358,6 @@ public class Publisher {
                     brokersMap.get(broker.getKey()).add(hashTag);
                     break;
                 }
-            }
-        }
-        BigInteger hashValue = hashTopic(channelName.getChannelName()).mod(maxBrokerHash);
-        for (Pair<Integer, BigInteger> broker : brokerList) { //for each broker port
-            if (hashValue.compareTo(broker.getValue()) < 0) {
-                if (!brokersMap.containsKey(broker.getKey())) {
-                    brokersMap.put(broker.getKey(), new ArrayList<String>());
-                    //puts in the broker port
-                }
-                brokersMap.get(broker.getKey()).add(channelName.getChannelName());
-                break;
             }
         }
     }

@@ -1,14 +1,11 @@
 import Nodes.Publisher;
 import channelName.ChannelName;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 
-public class PublisherMain {
+public class PublisherMain2 {
     public static void main(String[] args){
 
         String IP;
@@ -34,3 +31,4 @@ public class PublisherMain {
         }
     }
 }
+
