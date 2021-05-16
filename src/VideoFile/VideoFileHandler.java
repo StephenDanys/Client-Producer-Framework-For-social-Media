@@ -13,7 +13,6 @@ import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.Tag;
 
-import javax.imageio.ImageIO;
 
 
 public class VideoFileHandler {
@@ -32,7 +31,7 @@ public class VideoFileHandler {
         String tableElements[];
 
         //get the directory
-        File dir = new File("./res/dataset1/");
+        File dir = new File("./dataset1/");
         if (!dir.exists()) {
             System.err.println("HANDLER: READ: ERROR: Directory doesn't exist");
             return null;
@@ -77,6 +76,7 @@ public class VideoFileHandler {
                     }
 
 
+
                     ArrayList<String> associatedHashTags = new ArrayList<>();
 
                     byte[] fileContent = Files.readAllBytes(file.toPath());
@@ -109,7 +109,7 @@ public class VideoFileHandler {
         }
 
         //create a directory if ti does not exist
-        File dir = new File("./res/download/");
+        File dir = new File("./download/");
         if (!dir.exists()) {
             if (!dir.mkdir()) {
                 Extras.printError("HANDLER: WRITE: ERROR: Could not create directory");

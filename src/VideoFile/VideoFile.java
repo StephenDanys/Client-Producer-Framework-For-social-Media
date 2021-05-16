@@ -89,7 +89,7 @@ public class VideoFile implements Serializable {
         this.length = length;
     }
 
-    public void setFramerate(String framerate){
+    public void setFrameRate(String framerate){
         this.framerate = framerate;
     }
 
@@ -101,9 +101,15 @@ public class VideoFile implements Serializable {
         this.frameHeight = frameHeight;
     }
 
-    public void setAssociatedHashtags(ArrayList<String> associatedHashtags){
-        this.associatedHashtags = associatedHashtags;
+    public void addAssociatedHashtag(String associatedHashtag){
+            associatedHashtags.add(associatedHashtag);
+
     }
+    public void setAssociatedHashtags(ArrayList<String> list){
+        associatedHashtags= list;
+    }
+
+    public void removeAssociatedHashtags(ArrayList<String> associatedHashtags){}
 
     public void setVideoFileChunk(byte[] videoFileChunk){
         this.videoFileChunk = videoFileChunk;

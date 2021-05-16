@@ -1,4 +1,5 @@
 import Nodes.Publisher;
+import channelName.ChannelName;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,9 +9,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 public class PublisherMain {
     public static void main(String[] args){
+
         String IP;
         try{
             IP= InetAddress.getLocalHost().getHostAddress();
@@ -24,28 +27,18 @@ public class PublisherMain {
             System.err.println("ERROR: IP is loopback address");
             return;
         }
-        //create chanell name
+        //adding predifined port numbers for brokers
+        ArrayList<Integer> serverPorts=new ArrayList<>();
+        serverPorts.add(101);
+        serverPorts.add(102);
+        serverPorts.add(103);
 
-        Publisher pub=new Publisher();
-        List<String> serverPorts=null;
-        if(args.length < 1){
-            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-            while(true){
-                System.out.println("Server ports (split with spases): ");
-                try{
-                    String[] input = reader.readLine().split(" ");
-                    serverPorts = new ArrayList<>(Arrays.asList(input));
-                    break;
-                }catch(IOException e){
-                    System.err.println("ERROR: Could not read input");
-                }
-            }
-        }else{
-            serverPorts = new ArrayList(Arrays.asList(args));
-        }
-
+        //port
+        int port = Integer.parseInt(args[1]);
+        ChannelName name= new ChannelName("Publisher" + port, null);
+        Publisher pub= new Publisher(port,null,name);
         if (pub.init(serverPorts)){
-            pub.online();
+            pub.connect();
         }
     }
 }

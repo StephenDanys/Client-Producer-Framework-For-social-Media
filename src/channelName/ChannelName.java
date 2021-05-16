@@ -1,5 +1,6 @@
 package channelName;
 import VideoFile.Value;
+import VideoFile.VideoFile;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,21 +9,16 @@ import java.util.HashSet;
 public class ChannelName {
     private String channelName;
     private HashSet<String> hashTagsPublished;
-    private HashMap<String, ArrayList<Value>> userVideoFilesMap;
 
-    public ChannelName(String channelName, HashSet<String> hastagsPublished, HashMap<String, ArrayList<Value>> userVideoFilesMap){
+    public ChannelName(String channelName, HashSet<String> hashTagsPublished){
         this.channelName=channelName;
-        this.hashTagsPublished=hastagsPublished;
-        this.userVideoFilesMap=userVideoFilesMap;
+        this.hashTagsPublished=hashTagsPublished;
     }
     public String  getChannelName(){
         return channelName;
     }
     public HashSet<String> getHashTagsPublished(){
         return hashTagsPublished;
-    }
-    public HashMap<String, ArrayList<Value>> getUserVideoFilesMap(){
-        return userVideoFilesMap;
     }
 
     public void addPublishedHashTag(String Hashtag){
@@ -37,4 +33,5 @@ public class ChannelName {
         }
         return false;
     }
+
 }

@@ -3,6 +3,7 @@ package Nodes;
 import Extras.*;
 import Nodes.Broker;
 import VideoFile.Value;
+import VideoFile.VideoFile;
 import VideoFile.VideoFileHandler;
 import channelName.*;
 
@@ -22,7 +23,7 @@ public class Publisher {
     private static final  String IP= "127.0. 0.1";
     private final String RANGE; //range of artists (regex expression)
     private ArrayList<Pair<Integer, BigInteger>>  Brokers; //List of active Brokers( Port + HashValue)
-    private Map<String, ArrayList<Value>> files; //Map of Topics + videos that have this topic.
+    private Map<String, ArrayList<VideoFile>> files; //Map of Topics + videos that have this topic.
     private ServerSocket server;
     private ChannelName channelName;
 
@@ -43,9 +44,11 @@ public class Publisher {
      * @param topic is key,
      * @param vids the videos associated with this key
      */
-    public void  addHashTag(String topic, ArrayList<Value> vids){
-        files.put(topic, new ArrayList<Value>());
-        for (Value vid : vids){
+    public void  addHashTag(String topic, ArrayList<VideoFile> vids){
+        files.put(topic, new ArrayList<VideoFile>());
+        for (VideoFile vid : vids){
+            vid.addAssociatedHashtag(topic);
+            vid.setChannelName(channelName.getChannelName());
             files.get(topic).add(vid);
         }
     }
@@ -67,9 +70,51 @@ public class Publisher {
         return Extras.SHA1(topic);
     }
 
-    public void push(String topic, Value value){
+    /**
+     * Find the videos you want through the topic
+     * Break the video file into chunks and send them to broker
+     * If a problem occurs (ex. song doesn't exist notify about failure via sending null
+     * @param topic  video topic
+     * @param connection open connection with broker
+     */
+    public void push(String topic, Socket connection){
+        Extras.print("PUBLISHER: Push song to broker");
 
+        //if artist doesn't exist notify about failure
+        if (!files.containsKey(topic)){
+            Extras.printError("PUBLISHER: ERROR: No such topic exists: "+topic);
+            notifyFailure(connection);
+            return;
+        }
+        //boolean found = false;
+        ArrayList<VideoFile> chunks = null;
+
+        for(VideoFile video: files.get(topic)){ //for each video with this topic
+            chunks.addAll(generateChunks(video));
+            chunks.add(null);
+        }
+        chunks.add(null);
+        if (chunks == null) {
+            Extras.printError("PUBLISHER: ERROR: Video could not be broken to chunks");
+            notifyFailure(connection);
+            return;
+        }
+        //send to broker
+        try {
+            ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+
+            for (VideoFile chunk : chunks){
+                out.writeObject(chunk);
+                out.flush();
+            }
+
+            chunks.clear(); //clear chunk list
+        } catch (IOException e) {
+            Extras.printError("PUBLISHER: ERROR: PUSH: Could not send file chunks");
+            chunks.clear(); //clear chunk list
+        }
     }
+
     /**
      * Make publisher online (await incoming connections)
      * Get the song, search for it and push it to broker
@@ -105,8 +150,11 @@ public class Publisher {
                         public void run() {
                             try {
                                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                                in.readObject();
-                            } catch (IOException e) {
+                                String topic= (String) in.readObject();
+
+                                //send all videos mapped to this topic
+                                push(topic, connection);
+                            } catch (IOException | ClassNotFoundException e) {
                                 Extras.printError("PUBLISHER: ONLINE: ERROR: Could not read from stream");
                             }
                         }
@@ -119,8 +167,13 @@ public class Publisher {
 
     }
 
-    public ArrayList<Value> generateChunks(String v){
-
+    /**
+     * Uses video FileHandler to split video in chuncks
+     * @param video that we want to slpit
+     * @return an arrayList with it's chunks
+     */
+    public ArrayList<VideoFile> generateChunks(VideoFile video){
+        return VideoFileHandler.split(video);
     }
     /**
      * Initialize publisher
@@ -130,7 +183,7 @@ public class Publisher {
     public boolean init(ArrayList<Integer> brokerPorts) {
         Extras.print("PUBLISHER: Initialize publisher");
         //load videos from file
-        ArrayList<Value> vfiles;
+        ArrayList<VideoFile> vfiles;
         vfiles = VideoFileHandler.read(RANGE);
         if (vfiles == null || files.isEmpty()) {
             Extras.printError("PUBLISHER: ERROR: No available songs");

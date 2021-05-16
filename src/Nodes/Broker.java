@@ -1,31 +1,23 @@
 package Nodes;
 
-import javax.imageio.plugins.tiff.ExifGPSTagSet;
-import javax.sound.sampled.Port;
-import java.io.File;
-import java.lang.reflect.Array;
+import java.io.*;
 
 
 import java.math.BigInteger;
-import java.io.IOException;
-import java.util.function.Consumer;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-
 import Extras.*;
-import fileHandler.FileHandler;
+import VideoFile.VideoFile;
 
 
 public class Broker {
     //class variables
 
     private final String IP = "127.0.0.1";
-    private final int port; //for publishers and brokers
+    private final int port; //for publishers and brokers and Identification
     private final BigInteger HASH_VALUE;
 
     private ServerSocket pubSocket; //publisher and broker server
@@ -33,9 +25,6 @@ public class Broker {
 
     private ArrayList<Integer> brokersList; //the list with the available brokers (Ports)
     private ArrayList<Integer> registeredPublishers = new ArrayList(); //list with the registered publishers( Ports)
-
-
-    private static File userFile; //registered users
     
     private HashMap<String, Integer> hashTagFromPublisher; //Maps responsible publishers to contained Hashtags
     private HashMap<String,Integer> hashTagToBrokers; //Maps hashtag to the according brokers
@@ -55,16 +44,8 @@ public class Broker {
 
     //initialize all available brokers
     public void init(ArrayList<Integer> brokerPorts){
-
         Extras.print("BROKER: Initializing Broker.");
         brokersList = brokerPorts;
-
-        //create file with user credentials
-        //userFile = FileHandler.createUserFile();
-
-        //read user credentials
-        //registeredUsers = FileHandler.readUsers(userFile);
-
     }
 
     //make the broker online. Wait for a connection
@@ -75,8 +56,6 @@ public class Broker {
         conConnection();
     }
 
-    //get Functions @return the classes attributes
-    
     //@return the hashTags and their brokerPorts
     public HashMap<String,Integer> getBrokers(){
         return hashTagToBrokers;
@@ -131,18 +110,17 @@ public class Broker {
                     Socket connection;
                     try{
                         connection = pubSocket.accept();
-                        ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                        int clientPort = Integer.parseInt((String) in.readObject());
 
                         //creation of another thread to process the connection
                         Thread conProcess = new Thread(new Runnable(){
 
                             public void run(){
                                 //get connected with the socket with the specific port
-                                ObjectInputStream in = null;
+                                ObjectInputStream  in = null;
+                                int clientPort=0;
                                 try {
                                     in = new ObjectInputStream(connection.getInputStream());
-                                    int clientPort = Integer.parseInt((String) in.readObject());
+                                    clientPort = Integer.parseInt((String) in.readObject());
                                 } catch (IOException | ClassNotFoundException e) {
                                     e.printStackTrace();
                                 }
@@ -161,7 +139,7 @@ public class Broker {
                             }
                         });
                         threadPool.execute(conProcess);
-                    } catch (IOException | ClassNotFoundException e) {
+                    } catch (IOException e) {
                         Extras.printError("BROKER: ERROR: Problem connecting to Publisher!");
                     }
                 }
@@ -173,62 +151,15 @@ public class Broker {
     /*Activates the broker in the network. Makes him visible from the consumers. 
       Creates a thread to accept incoming connections and creates a thread for each created 
       connection. Uses the accept(Consumer s) method.*/
-    
-    public void conConnection(){
-        Extras.print("BROKER: Making broker online for consumers!");
-
-        try{
-            conSocket = new ServerSocket(port);
-        } catch (IOException e) {
-            Extras.printError("BROKER: ERROR: Could not go online for consumers");
-            try {
-                if (conSocket != null)
-                    conSocket.close();
-            } catch (IOException ex) {
-                Extras.printError("BROKER: TO CLIENT CONNECTION: ERROR: Server could not shut down");
-            }
-        }
-
-        Thread con_task = new Thread(new Runnable() {
-            public void run(){
-                while(true){
-                    try{
-                        Socket connection = conSocket.accept();
-
-                        //create a thread to process the connection
-                        Thread con_task = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                int clientPort = connection.getLocalPort();
-
-                                acceptConsumer(connection, clientPort);
-
-                                try{
-                                    connection.close();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        });
-                        threadPool.execute(con_task);
-                    } catch (IOException e){
-                        Extras.printError("BROKER: TO CLIENT CONNECTION: ERROR: Problem connecting");
-                    }
-                }
-            }
-        });
-        threadPool.execute(con_task);
-    }
-
     /*Connect with broker and gain access to his consumers
-    * =>we need this to update our files on otherBrokers
-    * */
+     * =>we need this to update our files on otherBrokers
+     * */
     public void acceptBrokerConnection(Socket connection, int brokerPort){
         Extras.print("BROKER: Accepting broker connection!");
 
         ObjectInputStream in;
         ArrayList<String> topics;
-        
+
         try {
             in = new ObjectInputStream(connection.getInputStream());
             topics= (ArrayList<String>) in.readObject();
@@ -253,39 +184,9 @@ public class Broker {
         }
     }
 
-    //Connect with the consumer and process the request
-    public void acceptConsumer(Socket connection, int clientPort) {
-        Extras.print("BROKER: Accept consumer connection");
-
-        ObjectInputStream in;
-        try{
-            in = new ObjectInputStream(connection.getInputStream());
-            String request = (String) in.readObject();
-
-            switch (request) {
-                case "REGISTER":
-                    registerUser(connection, clientPort);
-                    break;
-                case "PULL":
-                    Pair<String, String> song = (Pair) in.readObject();
-                    pull(connection, song.getKey(), song.getValue());
-                    break;
-                case "INIT":
-                    pull(connection, null, "_INIT");
-                    break;
-            }
-        } catch (IOException e) {
-            Extras.printError("BROKER: ACCEPT CONSUMER CONNECTION: Could not read from stream");
-        } catch (ClassNotFoundException e) {
-            Extras.printError("BROKER: ACCEPT PUBLISHER CONNECTION: Could not cast Object to Pair");
-        }
-    }
-
-
-
     /*If publisher is registered fetch the topics.
-    * In other case send has value.
-    * @param connection socket for connection*/
+     * In other case send has value.
+     * @param connection socket for connection*/
     public void acceptPublisher(Socket connection, int pubPort){
         Extras.print("BROKER: Accept publisher connection");
 
@@ -347,8 +248,6 @@ public class Broker {
         }
     }
 
-
-
     //this function sends this broker's consumers to the other brokers
     public void notifyBrokersOnChanges(ArrayList<String > topics){
         Extras.print("BROKER: Notifiyng other brokers!");
@@ -388,29 +287,94 @@ public class Broker {
         registeredPublishers.add(pubPort);
     }
 
-    /*Get Requested video from user <title,port>*/
-    public void pull (Socket clientCon,String title, int port){
-        Extras.print("BROKER: Get requested song from user");
+    public void conConnection(){
+        Extras.print("BROKER: Making broker online for consumers!");
 
-        int broker = consumersToBrokers.get(port); // get broker port responsible for that artist
-
-        if (port == 0) { // consumer wants the list of brokers
-            broker = 0;
+        try{
+            conSocket = new ServerSocket(port);
+        } catch (IOException e) {
+            Extras.printError("BROKER: ERROR: Could not go online for consumers");
+            try {
+                if (conSocket != null)
+                    conSocket.close();
+            } catch (IOException ex) {
+                Extras.printError("BROKER: TO CLIENT CONNECTION: ERROR: Server could not shut down");
+            }
         }
 
-        if(broker == 0){
+        Thread con_task = new Thread(new Runnable() {
+            public void run(){
+                while(true){
+                    try{
+                        Socket connection = conSocket.accept();
+
+                        //create a thread to process the connection
+                        Thread con_task = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                acceptConsumer(connection);
+                                try{
+                                    connection.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                        threadPool.execute(con_task);
+                    } catch (IOException e){
+                        Extras.printError("BROKER: TO CLIENT CONNECTION: ERROR: Problem connecting");
+                    }
+                }
+            }
+        });
+        threadPool.execute(con_task);
+    }
+
+    //Connect with the consumer and process the request
+    public void acceptConsumer(Socket connection) {
+        Extras.print("BROKER: Accept consumer connection");
+
+        ObjectInputStream in;
+        try{
+            in = new ObjectInputStream(connection.getInputStream());
+            String request = (String) in.readObject();
+
+            switch (request) {
+                case "PULL":
+                    String topic = (String) in.readObject();
+                    pull(connection, null, topic);
+                    break;
+            }
+        } catch (IOException e) {
+            Extras.printError("BROKER: ACCEPT CONSUMER CONNECTION: Could not read from stream");
+        } catch (ClassNotFoundException e) {
+            Extras.printError("BROKER: ACCEPT PUBLISHER CONNECTION: Could not cast Object to Pair");
+        }
+    }
+
+    /**
+     *
+     * @param clientCon socket to client
+     * @param title video title
+     * @param topic hashtag or channel name
+     */
+    public void pull (Socket clientCon,String title, String topic){
+        Extras.print("BROKER: Get requested video from client");
+        int broker = hashTagToBrokers.get(topic); // get broker port responsible for that topic
+
+        if(broker ==0){
             try{
                 // inform consumer that you will send the brokers
                 ObjectOutputStream cli_out = new ObjectOutputStream(clientCon.getOutputStream());
                 cli_out.writeObject("FAILURE");
                 cli_out.flush();
-
                 disconnect(clientCon);
             } catch (IOException e) {
                 Extras.printError("BROKER: PULL: ERROR: Could not use out stream");
             }
-        } else if (broker == getPubPort()){ // the current broker is responsible for this publisher
-            int publisher = consumersToPublishers.get(port);
+
+        } else if (broker == getPort()){ // the current broker is responsible for this topic
+            int publisher = hashTagFromPublisher.get(topic); //we need to go to to this publisher port
 
             try{
                 //inform consumer that you are about to send him the video
@@ -418,15 +382,15 @@ public class Broker {
                 cli_out.writeObject("ACCEPT");
                 cli_out.flush();
 
-                Socket pubConnx = new Socket(publisher, Publisher.getPort());
+                Socket pubConnection = new Socket(IP, publisher);
 
                 //send request for music file to publisher
-                ObjectOutputStream pub_out = new ObjectOutputStream(pubConnx.getOutputStream());
-                pub_out.writeObject(new Pair<String, int>(title, port));
+                ObjectOutputStream pub_out = new ObjectOutputStream(pubConnection.getOutputStream());
+                pub_out.writeObject(topic);
                 pub_out.flush();
 
                 // get files from publisher
-                ObjectInputStream pubIn = new ObjectInputStream(pubConnx.getInputStream());
+                ObjectInputStream pubIn = new ObjectInputStream(pubConnection.getInputStream());
                 int counter = 0;
                 VideoFile file;
                 while (counter < 2) {
@@ -439,12 +403,13 @@ public class Broker {
                         }
                         cli_out.writeObject(null);
                         cli_out.flush();
-                    } catch (EOFException e) {
                         ++counter;
+                    } catch (EOFException e) {
+                        Extras.printError("BROKER: pull : inconsistency in sending files to client");
                     }
                 }
 
-                disconnect(pubConnx);
+                disconnect(pubConnection);
             } catch (IOException e) {
                 Extras.printError("BROKER: PULL: Could not use streams");
             } catch (ClassNotFoundException e) {
@@ -457,7 +422,7 @@ public class Broker {
                 clientOut.writeObject("DECLINE");
                 clientOut.flush();
 
-                clientOut.writeObject(consumersToBrokers);
+                clientOut.writeObject(hashTagToBrokers);
                 clientOut.flush();
             } catch (IOException e) {
                 Extras.printError("BROKER: PULL: Could not use streams");
@@ -478,30 +443,8 @@ public class Broker {
         }
     }
 
-    private void registerUser(Socket connection, int clientPort){
-        Extras.print("BROKER: Register user");
-
-        try{
-            ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-            ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-
-            Pair<String, BigInteger> credentials = (Pair<String, BigInteger>) in.readObject();
-            Pair<String, Integer> extra = (Pair<String, Integer>) in.readObject();
-
-            String message = FileHandler.writeUser(userFile, credentials, extra, registeredUsers);
-
-            out.writeObject(message);
-            out.flush();
-
-        } catch (IOException e) {
-            Extras.printError("BROKER: REGISTER USER: Could not use streams");
-        } catch (ClassNotFoundException e) {
-            Extras.printError("BROKER: ACCEPT PUBLISHER CONNECTION: Could not cast Object to Pair");
-        }
-
-        disconnect(connection);
-    }
     private int getPort() { return this.port; }
+
     public String toString(){
         return "Broker@"+getIP()+"@"+getPort()+"@"+getValue();
     }
