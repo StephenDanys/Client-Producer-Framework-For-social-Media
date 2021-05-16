@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public class ChannelName {
-    private String channelName;
-    private HashSet<String> hashTagsPublished;
+    private String channelName; //name of channe;
+    private HashSet<String> hashTagsPublished;  //collection of hashTags that this channel is responsible for
 
     public ChannelName(String channelName, HashSet<String> hashTagsPublished){
         this.channelName=channelName;

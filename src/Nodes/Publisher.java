@@ -201,7 +201,7 @@ public class Publisher {
         for(String topic : files.keySet()){
             channelName.addPublishedHashTag(topic);
         }
-
+        Extras.print(files.toString()+"_____________");
         //get all active brokers
         getBrokers(brokerPorts);
 

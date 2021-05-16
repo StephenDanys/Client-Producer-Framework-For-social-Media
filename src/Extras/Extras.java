@@ -27,7 +27,7 @@ public class Extras {
         }
     }
 
-    //printing methods
+    //syncronized printing methods
     public static synchronized void print(String str){
         System.out.println(str);
     }

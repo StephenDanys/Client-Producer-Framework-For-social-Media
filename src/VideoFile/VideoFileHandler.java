@@ -22,6 +22,7 @@ public class VideoFileHandler {
         System.out.println("HANDLER: Reading video files");
 
         int numForSwitch = 1;
+        String[] tableElements;
         String videoName = "";
         String dateCreated = "";
         String length = "";
@@ -45,6 +46,7 @@ public class VideoFileHandler {
         if(files!=null){
 
             for(File file:files){
+                System.out.println(file.toString());
                 try{
                     //getting the metadata of that file
                     Metadata metadata = ImageMetadataReader.readMetadata(file);
@@ -71,12 +73,11 @@ public class VideoFileHandler {
                                 case (38):
                                     tableElements = stag.split("-");
                                     videoName = tableElements[1];
-                                    //if video title not in range continue to next file
-                                    if (!videoName.matches(range)) {
-                                        continue;
-                                    }
+
+
                             }
                             numForSwitch++;
+
                         }
                     }
 
@@ -113,7 +114,7 @@ public class VideoFileHandler {
         }
 
         //create a directory if ti does not exist
-        File dir = new File("./download/");
+        File dir = new File("././download/");
         /*if (!dir.exists()) {
             if (!dir.mkdir()) {
                 Extras.printError("HANDLER: WRITE: ERROR: Could not create directory");
@@ -233,7 +234,7 @@ public class VideoFileHandler {
         });
 
         //get bytes from chunks using a byte[] array
-        byte[] newFile = new byte[(chunks.size() +1) * 256000];
+        byte[] newFile = new byte[(chunks.size() +2) * 256000];
         int start =0; //it is the main pointer in the array that you will help us with the copy
 
         chunks.sort(VideoFile::compareTo); /*we are sorting the videoFiles using their serial numbers, in order to place them in the

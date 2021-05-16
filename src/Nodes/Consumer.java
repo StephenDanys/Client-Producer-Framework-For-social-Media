@@ -1,26 +1,20 @@
 package Nodes;
+
 import Extras.Extras;
-import Extras.Pair;
 import VideoFile.*;
-
 import java.util.*;
-
 import java.lang.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.math.BigInteger;
+
 import java.net.*;
 
 public class Consumer {
 
     private final int PORT; //in this port will the consumer contact brokers
     private final String IP = "127.0.0.1";
-
-    //private HashMap<String, BigInteger> channels = null; // PUBLISHER ASSIGNED TO BROKER
     private HashMap<String, Integer> hashTagToBrokers = null; //hashtags assigned to brokers (Ports)
-
-    private ArrayList<VideoFile> preview_videos;
     private final ArrayList<VideoFile> shared_chunks;
 
     public Consumer(int PORT) {
@@ -163,7 +157,7 @@ public class Consumer {
         }
         return null;
     }
-
+    //streaming methods
     public int getChunkListSize(){
         synchronized (shared_chunks){
             return shared_chunks.size();

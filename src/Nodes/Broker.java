@@ -1,25 +1,21 @@
 package Nodes;
 
 import java.io.*;
-
-
 import java.math.BigInteger;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import Extras.*;
 import VideoFile.VideoFile;
 
 
 public class Broker {
     //class variables
-
     private final String IP = "127.0.0.1";
-    private final int port; //for publishers and brokers and Identification
-    private final int consumerPort;
-    private final BigInteger HASH_VALUE;
+    private final int port; //for publishers and brokers
+    private final int consumerPort; // for consumers and Identification
+    private final BigInteger HASH_VALUE; //hash value for servers
 
     private ServerSocket pubSocket; //publisher and broker server
     private ServerSocket conSocket; //consumer socket
@@ -27,14 +23,13 @@ public class Broker {
     private ArrayList<Integer> brokersList; //the list with the available brokers (Ports)
     private ArrayList<Integer> registeredPublishers = new ArrayList(); //list with the registered publishers( Ports)
     
-    private HashMap<String, Integer> hashTagFromPublisher; //Maps responsible publishers to contained Hashtags
-    private HashMap<String,Integer> hashTagToBrokers; //Maps hashtag to the according brokers
+    private HashMap<String, Integer> hashTagFromPublisher; //Maps each topic to responsible publisher Port
+    private HashMap<String,Integer> hashTagToBrokers; //Maps Topic to the according brokers (uses Consumer Ports)
     
     private final ExecutorService threadPool;
 
     //constructor for class Broker
     public Broker (int port){
-
         Extras.print("BROKER: Broker Constructor" );
         this.HASH_VALUE = Extras.SHA1(IP + port);
         hashTagFromPublisher = new HashMap<>();
@@ -86,10 +81,8 @@ public class Broker {
      the port used in the pubSocket is for this instance of broker, since the publishers will know
      all of the brokers' ports
       */
-
     public void pubConnection(){
         Extras.print("BROKER: making the broker active online for publishers and other brokers.");
-
         try{
             pubSocket = new ServerSocket(port); //creating a new serverSocket for the publisher
         } catch(IOException e){
