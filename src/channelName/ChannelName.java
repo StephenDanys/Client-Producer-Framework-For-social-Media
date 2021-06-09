@@ -3,7 +3,7 @@ package channelName;
 import java.util.HashSet;
 
 public class ChannelName {
-    private String channelName; //name of channe;
+    private String channelName; //name of channel;
     private HashSet<String> hashTagsPublished;  //collection of hashTags that this channel is responsible for
 
     public ChannelName(String channelName, HashSet<String> hashTagsPublished){

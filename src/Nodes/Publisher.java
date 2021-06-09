@@ -24,7 +24,7 @@ public class Publisher {
     private ServerSocket server;
     private ChannelName channelName;
 
-    private Map<Integer, List<String>> brokersMap; //brokers (ports) and all their assigned hashtags
+    private Map<Integer, List<String>> brokersMap; //brokers (ports) and all their assigned topics
     private final ExecutorService threadPool;
 
     //constructor
@@ -41,7 +41,7 @@ public class Publisher {
      * @param topic is key,
      * @param vids the videos associated with this key
      */
-    public void  addHashTag(String topic, ArrayList<VideoFile> vids){
+    public void  addHashTagToVids(String topic, ArrayList<VideoFile> vids){
         files.put(topic, new ArrayList<VideoFile>());
         for (VideoFile vid : vids){
             vid.addAssociatedHashtag(topic);
@@ -52,10 +52,24 @@ public class Publisher {
 
     /**
      * Remove one topic from files list
-     * @param tag
+     * if map is empty delete topic from everywhere
+     * inform brokers
+     * @param videoFile the video to be removed
      */
-    public void  removeHashTag(String tag){
-        files.remove(tag);
+    public void  removeVideo(VideoFile videoFile){
+        for( String topic : videoFile.getAssociatedHashtags()){
+            files.get(topic).remove(videoFile);
+
+            if (files.get(topic).isEmpty()){
+                files.remove(topic);
+            }
+
+            for(int broker:brokersMap.keySet()){
+                if(brokersMap.get(broker).contains(topic)) brokersMap.get(broker).remove(topic);
+                break;
+            }
+        }
+        informBrokers();
     }
 
     /**
@@ -173,13 +187,78 @@ public class Publisher {
     public ArrayList<VideoFile> generateChunks(VideoFile video){
         return VideoFileHandler.split(video);
     }
+
+    /**
+     * initialize brokers, without using a single file for video entries
+     * also assign the channelName topic to broker
+     * @param brokerPorts list with the ports assigned to brokers (comes from main method)
+     */
+    public boolean init(ArrayList<Integer> brokerPorts) {
+        getBrokers(brokerPorts);
+        files=new HashMap<>();
+        files.put(channelName.getChannelName(), new ArrayList<VideoFile>());
+        if (Brokers != null) {
+            if (Brokers.isEmpty()) {
+                Extras.printError("PUBLISHER: ERROR: No brokers found for this publisher");
+                return false;
+            }
+            //specify which broker is responsible for what Hashtag and the channelName, store results in brokerMap
+            List<String> list= new ArrayList<>();
+            list.add(channelName.getChannelName());
+            assignTopicsToBroker(Brokers,list);
+        } else {
+            Extras.printError("PUBLISHER: ERROR: No brokers initialized");
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * The method to upload a chosen Video
+     */
+    public boolean addVideo(VideoFile video, String path, List<String> topics){
+
+        Extras.print("PUBLISHER: Video Added");
+
+        VideoFile vid;
+        if(video==null && path==null ) {
+            Extras.printError("PUBLISHER: Neither a video nor a path available ");
+            return false;
+        }
+        if (!(path==null)) vid= VideoFileHandler.read(path);
+        else vid=video;
+
+        //put topics in Files
+        for (String key: topics ){
+            if (!files.keySet().contains(key)){
+                files.put(key,new ArrayList<VideoFile>());
+            }
+        }
+
+        //topic assignment
+        vid.setChannelName(channelName.getChannelName());
+        vid.addAssociatedHashtag(channelName.getChannelName());
+        for( String topic :topics) {
+            vid.addAssociatedHashtag(topic);
+            channelName.addPublishedHashTag(topic);
+            files.get(topic).add(vid);
+        }
+        //add video to files entry with chanell name
+        files.get(channelName.getChannelName()).add(vid);
+        //add topics to brokerMap
+        assignTopicsToBroker(Brokers, topics);
+        informBrokers();
+        return true;
+    }
     /**
      * Initialize publisher
      * load videos, get all brokers, find with whom to connect and send them the creators
      * @param brokerPorts list with the ports assinged to brokers (comes from main method)
      */
-    public boolean init(ArrayList<Integer> brokerPorts) {
+    public boolean initWithFile(ArrayList<Integer> brokerPorts) {
+
         Extras.print("PUBLISHER: Initialize publisher");
+
         //load videos from file
         files= new HashMap<>();
         ArrayList<VideoFile> vfiles;
@@ -189,7 +268,7 @@ public class Publisher {
             return false;
         }
         //initialize files, using channelName topic
-        addHashTag(channelName.getChannelName(), vfiles);
+        addHashTagToVids(channelName.getChannelName(), vfiles);
 
         //here we can add more topics, while choosing videos that this topic will apply to
         //for the purposes of the 1st assignment, we'll only upload one video, with the channelName Topic
@@ -198,7 +277,6 @@ public class Publisher {
         for(String topic : files.keySet()){
             channelName.addPublishedHashTag(topic);
         }
-        Extras.print(files.toString()+"_____________");
         //get all active brokers
         getBrokers(brokerPorts);
 
@@ -209,7 +287,7 @@ public class Publisher {
                 return false;
             }
             //specify which broker is responsible for what Hashtag and the channelName, store results in brokerMap
-            assignPublisherToBroker(Brokers);
+            assignTopicsToBroker(Brokers,(List<String>) channelName.getHashTagsPublished());
         } else {
             Extras.printError("PUBLISHER: ERROR: No brokers initialized");
             return false;
@@ -332,16 +410,17 @@ public class Publisher {
      * Find the brokers that are responsible for this publisher's Hashtags
      * hash(Hashtag ) < hash(broker_IP + broker_port)
      * @param brokerList list with active brokers
+     * @param  topics List with topics to be assigned
      */
-    private void assignPublisherToBroker (ArrayList<Pair<Integer, BigInteger>> brokerList ){
+    private void assignTopicsToBroker (ArrayList<Pair<Integer, BigInteger>> brokerList, List<String> topics ){
         Extras.print("PUBLISHER: Assign topics to responsible brokers");
 
-        brokersMap = new HashMap<>();
+        if(brokersMap==null) brokersMap = new HashMap<>();
         //find broker whose hash value is greater than the others
         Pair<Integer, BigInteger> maxBroker = brokerList.get(brokerList.size() - 1);
         BigInteger maxBrokerHash = maxBroker.getValue();
 
-        for (String  hashTag: channelName.getHashTagsPublished()) {
+        for (String  hashTag: topics) {
             //if hash(hashTag) > maximum hash(broker)
             //modulo with the maximum broker so that hash(hashTag) is in range [min_broker, max_broker]
             BigInteger hashValue= hashTopic(hashTag).mod(maxBrokerHash);

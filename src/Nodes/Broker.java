@@ -143,12 +143,12 @@ public class Broker {
         threadPool.execute(connect);
     }
 
-    /*Activates the broker in the network. Makes him visible from the consumers. 
+    /**Activates the broker in the network. Makes him visible from the consumers.
       Creates a thread to accept incoming connections and creates a thread for each created 
-      connection. Uses the accept(Consumer s) method.*/
-    /*Connect with broker and gain access to his consumers
-     * =>we need this to update our files on otherBrokers
-     * */
+      connection. Uses the accept(Consumer s) method.
+      Connect with broker and gain access to his consumers
+      =>we need this to update our files on otherBrokers
+    */
     public void acceptBrokerConnection(Socket connection, ObjectInputStream input, int brokerPort){
         Extras.print("BROKER: Accepting broker connection!");
         ArrayList<String> topics;
@@ -169,8 +169,16 @@ public class Broker {
         setOuterConsumerSource(topics, brokerPort %100);
     }
 
-    //add the broker and the consumers he is responsible for in the hashMap
+    /**
+     *add the broker and the consumers he is responsible for in the hashMap
+     * remove everything that maps to the other broker, then add the right topics
+     */
     private synchronized void setOuterConsumerSource(List<String> hashTag, int broker){
+
+        for (String topic : hashTagToBrokers.keySet()){
+            if(hashTagToBrokers.get(topic)==broker) hashTagToBrokers.remove(topic);
+        }
+
         for (String hash : hashTag) {
             hashTagToBrokers.put(hash, broker);
         }
@@ -207,7 +215,11 @@ public class Broker {
             disconnect(connection);
 
             //send info to other brokers
-            //notifyBrokersOnChanges(pubs);
+            ArrayList<String> bros= new ArrayList<>();
+            for (String topic: hashTagToBrokers.keySet()){
+                if (hashTagToBrokers.get(topic)==getConsumerPort()) bros.add(topic);
+            }
+            notifyBrokersOnChanges(bros);
             return;
         }
 
@@ -230,16 +242,28 @@ public class Broker {
 
     /**
      * Write new hashtag in list Keep from which publisher the hash was fetched
+     * Also remove topics that might not exist anymore
      */
     public synchronized void setInnerPublisherSource(ArrayList<String > topics, int publisher) {
         for (String topic : topics) {
-            hashTagToBrokers.put(topic, getConsumerPort());
-            hashTagFromPublisher.put(topic, publisher);
-            Extras.print(hashTagFromPublisher.toString());
+            if(!hashTagToBrokers.keySet().contains(topic)) hashTagToBrokers.put(topic, getConsumerPort());
+            if (!hashTagFromPublisher.keySet().contains(topic))hashTagFromPublisher.put(topic, publisher);
+        }
+
+        for(String hash: hashTagFromPublisher.keySet()) {
+            if (hashTagFromPublisher.get(hash) == publisher)
+                if(!topics.contains(hash)) hashTagFromPublisher.remove(hash);
+        }
+
+        for(String hash : hashTagToBrokers.keySet()){
+            if(!hashTagFromPublisher.keySet().contains(hash)) hashTagToBrokers.remove(hash);
         }
     }
 
-    //this function sends this broker's consumers to the other brokers
+    /**
+     * Send to other brokers info
+     * @param topics and updated list of topics that this broker is responsible for
+     */
     public void notifyBrokersOnChanges(ArrayList<String > topics){
         Extras.print("BROKER: Notifiyng other brokers!");
 
