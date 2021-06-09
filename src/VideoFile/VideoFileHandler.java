@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.IOException;
 import Extras.Extras;
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.Arrays;
@@ -114,7 +115,8 @@ public class VideoFileHandler {
         }
 
         //create a directory if ti does not exist
-        File dir = new File("././download/");
+        String pathName = "./download/";
+        File dir = new File(pathName);
         /*if (!dir.exists()) {
             if (!dir.mkdir()) {
                 Extras.printError("HANDLER: WRITE: ERROR: Could not create directory");
@@ -123,7 +125,7 @@ public class VideoFileHandler {
         }
         */
         try{
-            FileOutputStream out = new FileOutputStream(dir + file.getVideoName() + ".mp4");
+            FileOutputStream out = new FileOutputStream(pathName + file.getVideoName());
             out.write(file.getVideoFileChunk());
 
             return true;
@@ -158,7 +160,7 @@ public class VideoFileHandler {
         for(VideoFile chunk : chunks){
             //create file
             try{
-                FileOutputStream out = new FileOutputStream(dir + chunk.getVideoName() + ".mp4");
+                FileOutputStream out = new FileOutputStream(dir + chunk.getVideoName());
                 out.write(chunk.getVideoFileChunk());
 
             } catch (IOException e) {
@@ -169,7 +171,7 @@ public class VideoFileHandler {
         return true;
     }
 
-    //splits a file into 512Kb chunks
+    //splits a file into 256kb chunks
     public static ArrayList<VideoFile> split (VideoFile file){
         Extras.print("HANDLER: Splitting video file");
 
@@ -234,7 +236,11 @@ public class VideoFileHandler {
         });
 
         //get bytes from chunks using a byte[] array
-        byte[] newFile = new byte[(chunks.size() +2) * 256000];
+        int byteSize =0;
+        for(VideoFile videoFile : chunks){
+            byteSize += videoFile.getVideoFileChunk().length;
+        }
+        byte[] newFile = new byte[byteSize];
         int start =0; //it is the main pointer in the array that you will help us with the copy
 
         chunks.sort(VideoFile::compareTo); /*we are sorting the videoFiles using their serial numbers, in order to place them in the
