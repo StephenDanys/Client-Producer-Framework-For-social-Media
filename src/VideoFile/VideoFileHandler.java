@@ -18,8 +18,76 @@ import com.drew.metadata.Tag;
 
 public class VideoFileHandler {
 
+    /*..
+    reads a single video. Gets it's metadata and reads the byte buffer from the file specified
+    @param path: the path to that video including it's name.
+     */
+    public static VideoFile read(String path){
+        System.out.println("HANDLER: Reading video");
+
+        int numForSwitch = 1;
+        String[] tableElements;
+        String videoName = "";
+        String dateCreated = "";
+        String length = "";
+        String frameRate = "";
+        String frameWidth = "";
+        String frameHeight = "";
+
+        VideoFile viFile = null; //initializing the videoFile instance
+
+        File singleVideo = new File(path); //creating the file object using the path parameter
+
+        if(singleVideo!=null){
+            try{
+                //getting the metadata of that file
+                Metadata metadata = ImageMetadataReader.readMetadata(singleVideo);
+
+                for (Directory directory : metadata.getDirectories()) {
+                    for (Tag tag : directory.getTags()) {
+                        String stag = tag.toString();
+                        switch (numForSwitch) {
+                            case (4):
+                                tableElements = stag.split("-");
+                                dateCreated = tableElements[1];
+                            case (6):
+                                tableElements = stag.split("-");
+                                length = tableElements[1];
+                            case (20):
+                                tableElements = stag.split("-");
+                                frameWidth = tableElements[1];
+                            case (21):
+                                tableElements = stag.split("-");
+                                frameHeight = tableElements[1];
+                            case (25):
+                                tableElements = stag.split("-");
+                                frameRate = tableElements[1];
+                            case (38):
+                                tableElements = stag.split("-");
+                                videoName = tableElements[1];
+
+
+                        }
+                        numForSwitch++;
+
+                    }
+                }
+
+                ArrayList<String> associatedHashTags = new ArrayList<>();
+
+                byte[] fileContent = Files.readAllBytes(singleVideo.toPath());
+
+                viFile = new VideoFile(videoName,"",dateCreated,length,frameRate,frameWidth,frameHeight,associatedHashTags,fileContent);
+
+            } catch(IOException | ImageProcessingException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return singleVideo!=null ? viFile : null;
+    }
     //it's an assumption that each hashtag is different, and some of them belong to a video
-    public static ArrayList<VideoFile> read(String range) {
+    public static ArrayList<VideoFile> readVideos(String range) {
         System.out.println("HANDLER: Reading video files");
 
         int numForSwitch = 1;
@@ -89,7 +157,6 @@ public class VideoFileHandler {
                     VideoFile viFile = new VideoFile(videoName,"",dateCreated,length,frameRate,frameWidth,frameHeight,associatedHashTags,fileContent);
                     fileChunks.add(viFile);
 
-
                 } catch(IOException | ImageProcessingException ex) {
                     ex.printStackTrace();
                 }
@@ -125,7 +192,7 @@ public class VideoFileHandler {
         }
         */
         try{
-            FileOutputStream out = new FileOutputStream(pathName + file.getVideoName());
+            FileOutputStream out = new FileOutputStream(".\\download\\" + file.getVideoName());
             out.write(file.getVideoFileChunk());
 
             return true;

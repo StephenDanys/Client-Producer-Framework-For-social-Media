@@ -183,7 +183,7 @@ public class Publisher {
         //load videos from file
         files= new HashMap<>();
         ArrayList<VideoFile> vfiles;
-        vfiles = VideoFileHandler.read(RANGE);
+        vfiles = VideoFileHandler.readVideos(RANGE);
         if (vfiles == null || vfiles.isEmpty()) {
             Extras.printError("PUBLISHER: ERROR: No available songs");
             return false;
