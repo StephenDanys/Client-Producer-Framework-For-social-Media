@@ -21,7 +21,7 @@ public class Broker {
     private ServerSocket conSocket; //consumer socket
 
     private ArrayList<Integer> brokersList; //the list with the available brokers (Ports)
-    private ArrayList<Integer> registeredPublishers = new ArrayList(); //list with the registered publishers( Ports)
+    private HashMap<Integer, String> registeredPublishers = new HashMap<>(); //list with the registered publishers( Ports)
     
     private HashMap<String, Integer> hashTagFromPublisher; //Maps each topic to responsible publisher Port
     private HashMap<String,Integer> hashTagToBrokers; //Maps Topic to the according brokers (uses Consumer Ports)
@@ -191,11 +191,9 @@ public class Broker {
         Extras.print("BROKER: Accept publisher connection");
 
         ObjectOutputStream out;
-
-
         // CASE 1
         // Publisher is registered
-        if(registeredPublishers.contains(pubPort)){
+        if(registeredPublishers.keySet().contains(pubPort)){
             ArrayList<String> pubs;
             //wait for hashtags
             try{
@@ -299,7 +297,7 @@ public class Broker {
 
     //add the publisher in broker's registered publisher list
     private synchronized void registerPublisher(Integer pubPort) {
-        registeredPublishers.add(pubPort);
+        registeredPublishers.put(pubPort, new String());
     }
 
     public void conConnection(){
@@ -356,9 +354,12 @@ public class Broker {
 
             switch (request) {
                 case "PULL":
+                    String title = (String) in.readObject();
                     String topic = (String) in.readObject();
-                    pull(connection, null, topic);
+                    pull(connection, title, topic);
                     break;
+                case "INIT": //send initial data to client
+                    sendInitData(connection);
             }
         } catch (IOException e) {
             Extras.printError("BROKER: ACCEPT CONSUMER CONNECTION: Could not read from stream");
@@ -366,7 +367,13 @@ public class Broker {
             Extras.printError("BROKER: ACCEPT PUBLISHER CONNECTION: Could not cast Object to Pair");
         }
     }
-
+    /**
+     * @param clientCon socket to client
+     */
+    public void sendInitData(Socket clientCon){
+        Extras.print("BROKER: Send Initial Info to server");
+        if(hashTagToBrokers==null)
+    }
     /**
      *
      * @param clientCon socket to client
@@ -379,7 +386,7 @@ public class Broker {
         Extras.print(String.valueOf(broker));
         if(broker ==0){
             try{
-                // inform consumer that you will send the brokers
+                // inform consumer that you can't find the topic
                 ObjectOutputStream cli_out = new ObjectOutputStream(clientCon.getOutputStream());
                 cli_out.writeObject("FAILURE");
                 cli_out.flush();
@@ -390,7 +397,6 @@ public class Broker {
 
         } else if (broker == getConsumerPort()){ // the current broker is responsible for this topic
             int publisher = hashTagFromPublisher.get(topic); //we need to go to to this publisher port
-            Extras.print(String.valueOf(publisher));
             try{
                 //inform consumer that you are about to send him the video
                 ObjectOutputStream cli_out = new ObjectOutputStream(clientCon.getOutputStream());
