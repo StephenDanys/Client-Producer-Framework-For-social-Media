@@ -17,20 +17,26 @@ public class Consumer {
     private final int PORT; //in this port will the consumer contact brokers
     private final String IP = "127.0.0.1";
     private HashMap<String, Integer> hashTagToBrokers = null; //hashtags assigned to brokers (Ports)
-    //private final ArrayList<VideoFile> shared_chunks;
+    private HashMap<String,Integer> publisherToBrokers =new HashMap<>(); //a publisher name targeted version of the above
     private List preview_videos;
     private Pair<String, BigInteger> user_credentials = null;
     private String STATE;
     private static String OUT = "LOGGED OUT";
     private static String IN = "LOGGED IN";
 
-    public Consumer(int PORT) {
+    public Consumer(int PORT ) {
         Extras.print("CONSUMER:  Create consumer");
         this.PORT = PORT;
         STATE = OUT;
         //shared_chunks = new ArrayList<>();
     }
 
+    /**
+     *
+     * @param credentials
+     * @param extra email and age
+     * @return
+     */
     public int register(Pair<String, BigInteger> credentials, Pair<String, Integer> extra) {
         Extras.print("CONSUMER: Register User");
 
@@ -65,13 +71,13 @@ public class Consumer {
                 disconnect(connection);
                 return -2;
             } else if (message.equals("TRUE")) {
-                //SUCCEFUL REGISTRATION RETURN 1
+                //SUCCESSFUL REGISTRATION RETURN 1
                 STATE = IN;
                 this.user_credentials = credentials;
                 disconnect(connection);
                 return 1;
             } else if (message.equals("FALSE")) {
-                //UNSUCCEFUL REGISTRATION RETURN 0
+                //UNSUCCESSFUL REGISTRATION RETURN 0
                 Extras.printError("CONSUMER: REGISTER: ERROR: Could not register.Try again.");
                 disconnect(connection);
                 return 0;
@@ -278,13 +284,16 @@ public class Consumer {
     }
 
     /**
-     *
+     *Init of a client
+     * loads the registered publisher of the
+     * @param broker
+     * that is assigned, in order to be later displayed in home screen
      */
-    public List<VideoFile> loadHashTags(){
+    public List<VideoFile> loadChannelNames(int broker){
         //open connection
         Socket connection = null;
         try {
-            connection = new Socket(IP, PORT);
+            connection = new Socket(IP, broker);
 
             //request brokers list
             ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
@@ -295,15 +304,15 @@ public class Consumer {
             ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
             String message = (String) in.readObject();
             //broker will send
-            if(message.equals("DECLINE")){
+            if(message.equals("FAILURE")){
+                Extras.printError("CONSUMER: tried to Init without publishers");
+            }else if(message.equals("ACCEPT")){
+                ArrayList< String> list = (ArrayList<String>) in.readObject();
+                for( String s : list){
+                    publisherToBrokers.put(s,broker);
+                }
                 getBrokers(in);
             }
-            disconnect(connection);
-            preview_videos = new ArrayList<>();
-            for(String channelName : channels.keySet()){
-                playData("", "", "INFO");
-            }
-            return preview_videos;
         } catch(IOException e){
             Extras.printError("CONSUMER: LOAD: ERROR: Could not get streams");
         } catch (ClassNotFoundException e){
@@ -313,39 +322,6 @@ public class Consumer {
         disconnect(connection);
         return null;
     }
-    //streaming methods
-    /*public int getChunkListSize(){
-        synchronized (shared_chunks){
-            return shared_chunks.size();
-        }
-    }
-
-    public VideoFile getNextChunk(){
-        synchronized (shared_chunks){
-            return shared_chunks.remove(0);
-        }
-    }
-
-    public VideoFile viewNextChunk(){
-        synchronized (shared_chunks){
-            return shared_chunks.get(0);
-        }
-    }
- /**
-     * Add chunk to shared_chunks arraylist
-     *
-     * @param chunk to be added
-
-    private void addChunk(VideoFile chunk) {
-        synchronized (shared_chunks){
-            shared_chunks.add(chunk);
-        }
-    }
-    private void resetChunks(){
-        synchronized (shared_chunks){
-            shared_chunks.clear();
-        }
-    }*/
     private void getBrokers(ObjectInputStream in){
         try{
             hashTagToBrokers = (HashMap) in.readObject();

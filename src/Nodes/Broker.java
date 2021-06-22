@@ -8,24 +8,30 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import Extras.*;
 import VideoFile.VideoFile;
+import FileHandler.*;
 
 
 public class Broker {
     //class variables
+    //server ID
     private final String IP = "127.0.0.1";
     private final int port; //for publishers and brokers
     private final int consumerPort; // for consumers and Identification
     private final BigInteger HASH_VALUE; //hash value for servers
 
+    //sockets
     private ServerSocket pubSocket; //publisher and broker server
     private ServerSocket conSocket; //consumer socket
 
+    //Data Structures
     private ArrayList<Integer> brokersList; //the list with the available brokers (Ports)
     private HashMap<Integer, String> registeredPublishers = new HashMap<>(); //list with the registered publishers( Ports)
-    
     private HashMap<String, Integer> hashTagFromPublisher; //Maps each topic to responsible publisher Port
     private HashMap<String,Integer> hashTagToBrokers; //Maps Topic to the according brokers (uses Consumer Ports)
-    
+
+
+    private static HashMap<Pair<String, BigInteger>, Pair<String, Integer>> registeredUsers;
+    private static File userFile; // registered users
     private final ExecutorService threadPool;
 
     //constructor for class Broker
@@ -43,6 +49,11 @@ public class Broker {
     public void init(ArrayList<Integer> brokerPorts){
         Extras.print("BROKER: Initializing Broker.");
         brokersList = brokerPorts;
+        //create file with user credentials
+        userFile = FileHandler.createUserFile();
+
+        //read user credentials
+        registeredUsers = FileHandler.readUsers(userFile);
     }
 
     //make the broker online. Wait for a connection
@@ -223,16 +234,19 @@ public class Broker {
 
         //Case 2
         //Publisher is not registered
-        registerPublisher(pubPort);
+        try{
+        ObjectInputStream in = input;
+        String chName = (String) in.readObject();
+        registerPublisher(pubPort, chName);
 
         //send your hash code
-        try{
+
             out = new ObjectOutputStream(connection.getOutputStream());
             out.writeObject(getValue());
             out.flush();
 
             disconnect(connection);
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             Extras.printError("BROKER: ACCEPT PUBLISHER CONNECTION: ERROR: Problem with output stream");
             disconnect(connection);
         }
@@ -296,8 +310,8 @@ public class Broker {
     }
 
     //add the publisher in broker's registered publisher list
-    private synchronized void registerPublisher(Integer pubPort) {
-        registeredPublishers.put(pubPort, new String());
+    private synchronized void registerPublisher(Integer pubPort, String chName) {
+        registeredPublishers.put(pubPort, chName);
     }
 
     public void conConnection(){
@@ -353,6 +367,12 @@ public class Broker {
             String request = (String) in.readObject();
 
             switch (request) {
+                case "REGISTER":
+                    registerUser(connection);
+                    break;
+                case "LOGIN":
+                    loginUser(connection);
+                    break;
                 case "PULL":
                     String title = (String) in.readObject();
                     String topic = (String) in.readObject();
@@ -368,16 +388,38 @@ public class Broker {
         }
     }
     /**
+     * Method that helps initialize the Consumer
      * @param clientCon socket to client
      */
     public void sendInitData(Socket clientCon){
         Extras.print("BROKER: Send Initial Info to server");
-        if(hashTagToBrokers==null)
+        if(registeredPublishers==null){
+            try{
+                // inform consumer that you can't find the topic
+                ObjectOutputStream cli_out = new ObjectOutputStream(clientCon.getOutputStream());
+                cli_out.writeObject("FAILURE");
+                cli_out.flush();
+                disconnect(clientCon);
+            } catch (IOException e) {
+                Extras.printError("BROKER: INIT: ERROR: Could not use out stream");
+            }
+        } else {
+            try{
+                ObjectOutputStream cli_out= new ObjectOutputStream((clientCon.getOutputStream()));
+                cli_out.writeObject(registeredPublishers.values());
+                cli_out.flush();
+
+                cli_out.writeObject(hashTagToBrokers);
+                cli_out.flush();
+            } catch (IOException e) {
+                Extras.printError("BROKER: INIT: ERROR: Could not use out stream");
+            }
+        }
     }
     /**
-     *
      * @param clientCon socket to client
      * @param title video title
+     * if title is null pull returns all videos associated with topic
      * @param topic hashtag or channel name
      */
     public void pull (Socket clientCon,String title, String topic){
@@ -407,7 +449,8 @@ public class Broker {
 
                 //send request for music file to publisher
                 ObjectOutputStream pub_out = new ObjectOutputStream(pubConnection.getOutputStream());
-                pub_out.writeObject(topic);
+                Pair<String,String> search= new Pair<String, String>(topic,title);
+                pub_out.writeObject(search);
                 pub_out.flush();
 
                 // get files from publisher
@@ -452,6 +495,78 @@ public class Broker {
         }
     }
 
+    //login
+    /**
+     * Save credentials in a file and inform user about his registration
+     *
+     * @param connection socket for connection
+     */
+    private void registerUser(Socket connection) {
+        Extras.print("BROKER: Register user");
+
+        try {
+            ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+
+            Pair<String, BigInteger> credentials = (Pair<String, BigInteger>) in.readObject();
+            Pair<String, Integer> extra = (Pair<String, Integer>) in.readObject();
+
+
+
+            String message = FileHandler.writeUser(userFile, credentials, extra, registeredUsers);
+
+            out.writeObject(message);
+            out.flush();
+        } catch (IOException e) {
+            Extras.printError("BROKER: REGISTER USER: Could not use streams");
+        } catch (ClassNotFoundException e) {
+            Extras.printError("BROKER: ACCEPT PUBLISHER CONNECTION: Could not cast Object to Pair");
+        }
+
+        disconnect(connection);
+    }
+    /**
+     * Check credentials send by user and inform user about their validity
+     * @param connection socket for connection
+     */
+    private synchronized void loginUser(Socket connection) {
+        Extras.print("BROKER: Log in user");
+
+        try {
+            ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+            Pair<String, BigInteger> credentials = (Pair<String, BigInteger>) in.readObject();
+
+            boolean registered = false;
+            Pair<String, BigInteger> client = null;
+            for (Pair<String, BigInteger> consumer : registeredUsers.keySet()) {// check if consumer is registered
+                if (consumer.getKey().equals(credentials.getKey())) { // check his username
+                    registered = true;
+                    if (credentials.getValue().equals(consumer.getValue())) { // check his password
+                        client = consumer;
+                    }
+                }
+            }
+
+            // send message to consumer
+            ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+            String message = "FALSE"; // used for wrong credentials
+            if (!registered) { // if not registered, sign consumer up
+                message = "REGISTER";
+            } else if (client != null) { // if consumer registered and used right credentials
+                message = "VERIFIED";
+            }
+            out.writeObject(message);
+            out.flush();
+
+            disconnect(connection);
+        } catch (IOException e) {
+            Extras.printError("BROKER: LOGIN USER: Could not use streams");
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            Extras.printError("BROKER: LOGIN USER: Could not cast Object to Pair");
+            e.printStackTrace();
+        }
+    }
     public void disconnect (Socket socket){
         Extras.print("BROKER: Close socket connection");
 

@@ -88,7 +88,7 @@ public class Publisher {
      * @param topic  video topic
      * @param connection open connection with broker
      */
-    public void push(String topic, Socket connection){
+    public void push(String topic, String title, Socket connection){
         Extras.print("PUBLISHER: Push song to broker");
 
         //if artist doesn't exist notify about failure
@@ -97,13 +97,17 @@ public class Publisher {
             notifyFailure(connection);
             return;
         }
-        //boolean found = false;
+
         ArrayList<VideoFile> chunks = new ArrayList();
 
         for(VideoFile video: files.get(topic)){ //for each video with this topic
-            chunks.addAll(generateChunks(video));
-            Extras.print(String.valueOf(chunks.size()));
-            chunks.add(null);
+            if(title==null) {
+                chunks.addAll(generateChunks(video));
+                chunks.add(null);
+            } else if(video.getVideoName().equals(title)){
+                chunks.addAll(generateChunks(video));
+                chunks.add(null);
+            }
         }
         chunks.add(null);
         if (chunks == null) {
@@ -161,10 +165,12 @@ public class Publisher {
                         public void run() {
                             try {
                                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                                String topic= (String) in.readObject();
-
+                                //receive topic, and tile in search pair
+                                Pair<String, String> search= (Pair<String, String>) in.readObject();
+                                String topic= search.getKey();
+                                String title = search.getValue();
                                 //send all videos mapped to this topic
-                                push(topic, connection);
+                                push(topic,title, connection);
                             } catch (IOException | ClassNotFoundException e) {
                                 Extras.printError("PUBLISHER: ONLINE: ERROR: Could not read from stream");
                             }
@@ -262,7 +268,7 @@ public class Publisher {
         //load videos from file
         files= new HashMap<>();
         ArrayList<VideoFile> vfiles;
-        vfiles = VideoFileHandler.read(RANGE);
+        vfiles = VideoFileHandler.readVideos(RANGE);
         if (vfiles == null || vfiles.isEmpty()) {
             Extras.printError("PUBLISHER: ERROR: No available songs");
             return false;
@@ -343,7 +349,9 @@ public class Publisher {
                 try{
                     connection = new Socket("127.0.0.1", serverPort);
                     out = new ObjectOutputStream(connection.getOutputStream());
-                    out.writeObject(port); //sending to broker my port so that he knows who i am
+                    out.writeObject(port); //sending to broker my port and my channel name so that he knows who i am
+                    out.flush();
+                    out.writeObject(channelName.getChannelName());
                     out.flush();
                     //get hash code
                     in = new ObjectInputStream(connection.getInputStream());
