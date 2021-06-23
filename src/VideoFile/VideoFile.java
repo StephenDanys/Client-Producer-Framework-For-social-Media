@@ -109,7 +109,9 @@ public class VideoFile implements Serializable {
         associatedHashtags= list;
     }
 
-    public void removeAssociatedHashtags(ArrayList<String> associatedHashtags){}
+    public void removeAssociatedHashtag(String topic){
+        associatedHashtags.remove(topic);
+    }
 
     public void setVideoFileChunk(byte[] videoFileChunk){
         this.videoFileChunk = videoFileChunk;

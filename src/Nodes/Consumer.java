@@ -16,10 +16,12 @@ public class Consumer {
 
     private final int PORT; //in this port will the consumer contact brokers
     private final String IP = "127.0.0.1";
+
     private HashMap<String, Integer> hashTagToBrokers = null; //hashtags assigned to brokers (Ports)
     private HashMap<String,Integer> publisherToBrokers =new HashMap<>(); //a publisher name targeted version of the above
+
     private List preview_videos;
-    private Pair<String, BigInteger> user_credentials = null;
+    private Pair<String, BigInteger> user_credentials = null; // pw and username
     private String STATE;
     private static String OUT = "LOGGED OUT";
     private static String IN = "LOGGED IN";
@@ -28,7 +30,6 @@ public class Consumer {
         Extras.print("CONSUMER:  Create consumer");
         this.PORT = PORT;
         STATE = OUT;
-        //shared_chunks = new ArrayList<>();
     }
 
     /**
@@ -163,8 +164,6 @@ public class Consumer {
     public ArrayList<VideoFile> playData(String topic, String title, String mode) {
         Extras.print("CONSUMER: Video request");
         ArrayList<VideoFile> videos = null;
-
-        //boolean state = false
         try {
             //CONSUMER HASN'T ASK FOR A VIDEO YET
             //ASK YOUR MAIN BROKER FOR A VIDEO

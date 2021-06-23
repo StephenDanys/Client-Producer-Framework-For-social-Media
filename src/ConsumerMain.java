@@ -31,7 +31,7 @@ public class ConsumerMain {
                     String topic = input();
                     System.out.println("Type mode1 to save chunks or mode2 to merge and save the video(mode2)");
                     String mode = input();
-                    consumer.playData(topic,mode);
+                    consumer.playData(topic,null, mode);
                 //case(2):
                 case(0):
                     System.out.println("Thank you!");

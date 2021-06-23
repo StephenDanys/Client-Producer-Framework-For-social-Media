@@ -72,6 +72,14 @@ public class Publisher {
         informBrokers();
     }
 
+    public void removeTopic(String topic ) {
+        ArrayList<VideoFile> vids= files.remove(topic);
+        for (VideoFile vid : vids){
+            vid.removeAssociatedHashtag(topic);
+        }
+
+    }
+
     /**
      * Runs a
      * @param topic trough SHA1
@@ -249,7 +257,7 @@ public class Publisher {
             channelName.addPublishedHashTag(topic);
             files.get(topic).add(vid);
         }
-        //add video to files entry with chanell name
+        //add video to files entry with channel name
         files.get(channelName.getChannelName()).add(vid);
         //add topics to brokerMap
         assignTopicsToBroker(Brokers, topics);
@@ -333,7 +341,7 @@ public class Publisher {
     }
 
     /**
-     * Connect with broker, send him my port number and get its hash value
+     * Connect with broker, send him my port number and my channel name and get its hash value
      * @param serverPort broker's port number
      */
     private Thread getServerHash(int serverPort) {

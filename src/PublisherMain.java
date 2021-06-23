@@ -25,14 +25,11 @@ public class PublisherMain {
         serverPorts.add(102);
         serverPorts.add(103);
 
-        ArrayList<String> list=new ArrayList<>();
-        list.add("hi");
         //port
         int port = Integer.parseInt(args[0]);
         ChannelName name= new ChannelName("Publisher" + port, new HashSet<String>());
         Publisher pub= new Publisher(port,null,name);
         if (pub.init(serverPorts)){
-            pub.addVideo(list);
             pub.connect();
         }
     }

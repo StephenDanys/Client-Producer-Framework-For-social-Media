@@ -50,10 +50,10 @@ public class Broker {
         Extras.print("BROKER: Initializing Broker.");
         brokersList = brokerPorts;
         //create file with user credentials
-        userFile = FileHandler.createUserFile();
+        //userFile = FileHandler.createUserFile();
 
         //read user credentials
-        registeredUsers = FileHandler.readUsers(userFile);
+        //registeredUsers = FileHandler.readUsers(userFile);
     }
 
     //make the broker online. Wait for a connection
@@ -367,12 +367,12 @@ public class Broker {
             String request = (String) in.readObject();
 
             switch (request) {
-                case "REGISTER":
+                /*case "REGISTER":
                     registerUser(connection);
                     break;
                 case "LOGIN":
                     loginUser(connection);
-                    break;
+                    break;*/
                 case "PULL":
                     String title = (String) in.readObject();
                     String topic = (String) in.readObject();
@@ -495,12 +495,12 @@ public class Broker {
         }
     }
 
-    //login
+    /*
     /**
      * Save credentials in a file and inform user about his registration
      *
      * @param connection socket for connection
-     */
+
     private void registerUser(Socket connection) {
         Extras.print("BROKER: Register user");
 
@@ -528,7 +528,7 @@ public class Broker {
     /**
      * Check credentials send by user and inform user about their validity
      * @param connection socket for connection
-     */
+
     private synchronized void loginUser(Socket connection) {
         Extras.print("BROKER: Log in user");
 
@@ -567,6 +567,7 @@ public class Broker {
             e.printStackTrace();
         }
     }
+    */
     public void disconnect (Socket socket){
         Extras.print("BROKER: Close socket connection");
 
